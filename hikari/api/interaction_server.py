@@ -39,13 +39,9 @@ if typing.TYPE_CHECKING:
     _InteractionT_co = typing.TypeVar("_InteractionT_co", bound=base_interactions.PartialInteraction, covariant=True)
     _ResponseT_co = typing.TypeVar("_ResponseT_co", bound=special_endpoints.InteractionResponseBuilder, covariant=True)
     _MessageResponseBuilderT = typing.Union[
-        special_endpoints.InteractionDeferredBuilder,
-        special_endpoints.InteractionMessageBuilder,
+        special_endpoints.InteractionDeferredBuilder, special_endpoints.InteractionMessageBuilder
     ]
-    _ModalOrMessageResponseBuilder = typing.Union[
-        _MessageResponseBuilderT,
-        special_endpoints.InteractionModalBuilder,
-    ]
+    _ModalOrMessageResponseBuilder = typing.Union[_MessageResponseBuilderT, special_endpoints.InteractionModalBuilder]
 
 
 ListenerT = typing.Union[
@@ -139,15 +135,13 @@ class InteractionServer(abc.ABC):
     @abc.abstractmethod
     def get_listener(
         self, interaction_type: typing.Type[command_interactions.CommandInteraction], /
-    ) -> typing.Optional[ListenerT[command_interactions.CommandInteraction, _ModalOrMessageResponseBuilder]]:
-        ...
+    ) -> typing.Optional[ListenerT[command_interactions.CommandInteraction, _ModalOrMessageResponseBuilder]]: ...
 
     @typing.overload
     @abc.abstractmethod
     def get_listener(
         self, interaction_type: typing.Type[component_interactions.ComponentInteraction], /
-    ) -> typing.Optional[ListenerT[component_interactions.ComponentInteraction, _ModalOrMessageResponseBuilder]]:
-        ...
+    ) -> typing.Optional[ListenerT[component_interactions.ComponentInteraction, _ModalOrMessageResponseBuilder]]: ...
 
     @typing.overload
     @abc.abstractmethod
@@ -155,22 +149,19 @@ class InteractionServer(abc.ABC):
         self, interaction_type: typing.Type[command_interactions.AutocompleteInteraction], /
     ) -> typing.Optional[
         ListenerT[command_interactions.AutocompleteInteraction, special_endpoints.InteractionAutocompleteBuilder]
-    ]:
-        ...
+    ]: ...
 
     @typing.overload
     @abc.abstractmethod
     def get_listener(
         self, interaction_type: typing.Type[modal_interactions.ModalInteraction], /
-    ) -> typing.Optional[ListenerT[modal_interactions.ModalInteraction, _MessageResponseBuilderT]]:
-        ...
+    ) -> typing.Optional[ListenerT[modal_interactions.ModalInteraction, _MessageResponseBuilderT]]: ...
 
     @typing.overload
     @abc.abstractmethod
     def get_listener(
         self, interaction_type: typing.Type[_InteractionT_co], /
-    ) -> typing.Optional[ListenerT[_InteractionT_co, special_endpoints.InteractionResponseBuilder]]:
-        ...
+    ) -> typing.Optional[ListenerT[_InteractionT_co, special_endpoints.InteractionResponseBuilder]]: ...
 
     @abc.abstractmethod
     def get_listener(
@@ -199,8 +190,7 @@ class InteractionServer(abc.ABC):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     @abc.abstractmethod
@@ -213,8 +203,7 @@ class InteractionServer(abc.ABC):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     @abc.abstractmethod
@@ -227,8 +216,7 @@ class InteractionServer(abc.ABC):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     @abc.abstractmethod
@@ -239,8 +227,7 @@ class InteractionServer(abc.ABC):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @abc.abstractmethod
     def set_listener(

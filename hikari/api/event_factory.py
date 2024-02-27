@@ -677,9 +677,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_audit_log_entry_create_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> guild_events.AuditLogEntryCreateEvent:
         """Parse a raw payload from Discord into a audit log entry create event object.
 
@@ -702,9 +700,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_interaction_create_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> interaction_events.InteractionCreateEvent:
         """Parse a raw payload from Discord into a interaction create event object.
 
@@ -885,9 +881,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_scheduled_event_create_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> scheduled_events.ScheduledEventCreateEvent:
         """Parse a raw payload from Discord into a scheduled event create event object.
 
@@ -906,9 +900,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_scheduled_event_update_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> scheduled_events.ScheduledEventUpdateEvent:
         """Parse a raw payload from Discord into a scheduled event update event object.
 
@@ -927,9 +919,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_scheduled_event_delete_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> scheduled_events.ScheduledEventDeleteEvent:
         """Parse a raw payload from Discord into a scheduled event delete event object.
 
@@ -948,9 +938,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_scheduled_event_user_add_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> scheduled_events.ScheduledEventUserAddEvent:
         """Parse a raw payload from Discord into a scheduled event user add event object.
 
@@ -969,9 +957,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_scheduled_event_user_remove_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> scheduled_events.ScheduledEventUserRemoveEvent:
         """Parse a raw payload from Discord into a scheduled event user remove event object.
 
@@ -1246,9 +1232,7 @@ class EventFactory(abc.ABC):
 
     @abc.abstractmethod
     def deserialize_ready_event(
-        self,
-        shard: gateway_shard.GatewayShard,
-        payload: data_binding.JSONObject,
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
     ) -> shard_events.ShardReadyEvent:
         """Parse a raw payload from Discord into a ready event object.
 

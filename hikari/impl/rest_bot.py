@@ -58,13 +58,9 @@ if typing.TYPE_CHECKING:
 
     _InteractionT_co = typing.TypeVar("_InteractionT_co", bound=base_interactions.PartialInteraction, covariant=True)
     _MessageResponseBuilderT = typing.Union[
-        special_endpoints.InteractionDeferredBuilder,
-        special_endpoints.InteractionMessageBuilder,
+        special_endpoints.InteractionDeferredBuilder, special_endpoints.InteractionMessageBuilder
     ]
-    _ModalOrMessageResponseBuilderT = typing.Union[
-        _MessageResponseBuilderT,
-        special_endpoints.InteractionModalBuilder,
-    ]
+    _ModalOrMessageResponseBuilderT = typing.Union[_MessageResponseBuilderT, special_endpoints.InteractionModalBuilder]
 
 _LOGGER: typing.Final[logging.Logger] = logging.getLogger("hikari.rest_bot")
 
@@ -253,8 +249,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         max_retries: int = 3,
         proxy_settings: typing.Optional[config_impl.ProxySettings] = None,
         rest_url: typing.Optional[str] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     def __init__(
@@ -274,8 +269,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         max_retries: int = 3,
         proxy_settings: typing.Optional[config_impl.ProxySettings] = None,
         rest_url: typing.Optional[str] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def __init__(
         self,
@@ -337,9 +331,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
 
         # InteractionServer
         self._server = interaction_server_impl.InteractionServer(
-            entity_factory=self._entity_factory,
-            public_key=public_key,
-            rest_client=self._rest,
+            entity_factory=self._entity_factory, public_key=public_key, rest_client=self._rest
         )
 
     @property
@@ -574,12 +566,10 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
             except AttributeError:
                 _LOGGER.log(ux.TRACE, "cannot set coroutine tracking depth for sys, no functionality exists for this")
 
-        try:
-            with signals.handle_interrupts(
-                enabled=enable_signal_handlers,
-                loop=loop,
-                propagate_interrupts=propagate_interrupts,
-            ):
+        with signals.handle_interrupts(
+            enabled=enable_signal_handlers, loop=loop, propagate_interrupts=propagate_interrupts
+        ):
+            try:
                 loop.run_until_complete(
                     self.start(
                         backlog=backlog,
@@ -596,22 +586,27 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
                 )
                 loop.run_until_complete(self.join())
 
-        finally:
-            if self._close_event:
-                if self._is_closing:
-                    loop.run_until_complete(self._close_event.wait())
-                else:
-                    loop.run_until_complete(self.close())
+            finally:
+                try:
+                    if self._close_event:
+                        if self._is_closing:
+                            loop.run_until_complete(self._close_event.wait())
+                        else:
+                            loop.run_until_complete(self.close())
 
-            if close_passed_executor and self._executor:
-                _LOGGER.debug("shutting down executor %s", self._executor)
-                self._executor.shutdown(wait=True)
-                self._executor = None
+                    if close_passed_executor and self._executor:
+                        _LOGGER.debug("shutting down executor %s", self._executor)
+                        self._executor.shutdown(wait=True)
+                        self._executor = None
 
-            if close_loop:
-                aio.destroy_loop(loop, _LOGGER)
+                    if close_loop:
+                        aio.destroy_loop(loop, _LOGGER)
 
-            _LOGGER.info("successfully terminated")
+                    _LOGGER.info("successfully terminated")
+
+                except errors.HikariInterrupt:
+                    _LOGGER.warning("forcefully terminated")
+                    raise
 
     async def start(
         self,
@@ -668,8 +663,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
 
         if check_for_updates:
             asyncio.create_task(
-                ux.check_for_updates(self._http_settings, self._proxy_settings),
-                name="check for package updates",
+                ux.check_for_updates(self._http_settings, self._proxy_settings), name="check for package updates"
             )
 
         self._rest.start()
@@ -698,16 +692,14 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         self, interaction_type: typing.Type[command_interactions.CommandInteraction], /
     ) -> typing.Optional[
         interaction_server_.ListenerT[command_interactions.CommandInteraction, _ModalOrMessageResponseBuilderT]
-    ]:
-        ...
+    ]: ...
 
     @typing.overload
     def get_listener(
         self, interaction_type: typing.Type[component_interactions.ComponentInteraction], /
     ) -> typing.Optional[
         interaction_server_.ListenerT[component_interactions.ComponentInteraction, _ModalOrMessageResponseBuilderT]
-    ]:
-        ...
+    ]: ...
 
     @typing.overload
     def get_listener(
@@ -716,20 +708,21 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         interaction_server_.ListenerT[
             command_interactions.AutocompleteInteraction, special_endpoints.InteractionAutocompleteBuilder
         ]
-    ]:
-        ...
+    ]: ...
 
     @typing.overload
     def get_listener(
         self, interaction_type: typing.Type[modal_interactions.ModalInteraction], /
-    ) -> typing.Optional[interaction_server_.ListenerT[modal_interactions.ModalInteraction, _MessageResponseBuilderT]]:
-        ...
+    ) -> typing.Optional[
+        interaction_server_.ListenerT[modal_interactions.ModalInteraction, _MessageResponseBuilderT]
+    ]: ...
 
     @typing.overload
     def get_listener(
         self, interaction_type: typing.Type[_InteractionT_co], /
-    ) -> typing.Optional[interaction_server_.ListenerT[_InteractionT_co, special_endpoints.InteractionResponseBuilder]]:
-        ...
+    ) -> typing.Optional[
+        interaction_server_.ListenerT[_InteractionT_co, special_endpoints.InteractionResponseBuilder]
+    ]: ...
 
     def get_listener(
         self, interaction_type: typing.Type[_InteractionT_co], /
@@ -746,8 +739,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     def set_listener(
@@ -759,8 +751,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     def set_listener(
@@ -774,8 +765,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @typing.overload
     def set_listener(
@@ -787,8 +777,7 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
         /,
         *,
         replace: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def set_listener(
         self,

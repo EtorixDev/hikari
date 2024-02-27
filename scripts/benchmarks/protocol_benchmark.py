@@ -93,39 +93,28 @@ class BasicHikariProtocol(fast_protocol.FastProtocolChecking, typing.Protocol):
 
 
 class Valid:
-    def test(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test2(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test2(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test3(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test3(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test4(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test4(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test5(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test5(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test6(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test6(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test7(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test7(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test8(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test8(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test9(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test9(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
-    def test10(self, arg1: str, arg2: bool) -> typing.List[int]:
-        ...
+    def test10(self, arg1: str, arg2: bool) -> typing.List[int]: ...
 
 
-class Invalid:
-    ...
+class Invalid: ...
 
 
 isinstance_long = Valid()
@@ -136,45 +125,29 @@ for i in range(100_000):
     assert sum(i for i in range(10)) > 0
 
 py_protocol_isinstance_long_time = timeit.timeit(
-    "isinstance(isinstance_long, BasicPyProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "isinstance(isinstance_long, BasicPyProtocol)", number=1_000_000, globals=globals()
 )
 hikari_protocol_isinstance_long_time = timeit.timeit(
-    "isinstance(isinstance_long, BasicHikariProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "isinstance(isinstance_long, BasicHikariProtocol)", number=1_000_000, globals=globals()
 )
 py_protocol_isinstance_failfast_time = timeit.timeit(
-    "isinstance(isinstance_failfast, BasicPyProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "isinstance(isinstance_failfast, BasicPyProtocol)", number=1_000_000, globals=globals()
 )
 hikari_protocol_isinstance_failfast_time = timeit.timeit(
-    "isinstance(isinstance_failfast, BasicHikariProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "isinstance(isinstance_failfast, BasicHikariProtocol)", number=1_000_000, globals=globals()
 )
 
 py_protocol_issubclass_long_time = timeit.timeit(
-    "issubclass(Invalid, BasicPyProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "issubclass(Invalid, BasicPyProtocol)", number=1_000_000, globals=globals()
 )
 hikari_protocol_issubclass_long_time = timeit.timeit(
-    "issubclass(Invalid, BasicHikariProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "issubclass(Invalid, BasicHikariProtocol)", number=1_000_000, globals=globals()
 )
 py_protocol_issubclass_failfast_time = timeit.timeit(
-    "issubclass(Valid, BasicPyProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "issubclass(Valid, BasicPyProtocol)", number=1_000_000, globals=globals()
 )
 hikari_protocol_issubclass_failfast_time = timeit.timeit(
-    "issubclass(Valid, BasicHikariProtocol)",
-    number=1_000_000,
-    globals=globals(),
+    "issubclass(Valid, BasicHikariProtocol)", number=1_000_000, globals=globals()
 )
 
 print("isinstance(long, BasicPyProtocol)", py_protocol_isinstance_long_time, "µs")
