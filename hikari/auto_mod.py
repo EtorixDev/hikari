@@ -45,7 +45,7 @@ import typing
 import attr
 
 from hikari import snowflakes
-from hikari.internal import attr_extensions
+from hikari.internal import attrs_extensions
 from hikari.internal import enums
 
 if typing.TYPE_CHECKING:
@@ -71,7 +71,7 @@ class AutoModActionType(int, enums.Enum):
     """
 
 
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(kw_only=True, weakref_slot=False)
 class PartialAutoModAction:
     """Base class for an action which is executed when a rule is triggered."""
@@ -141,7 +141,7 @@ class AutoModKeywordPresetType(int, enums.Enum):
     """Trigger on personal insults and words which "may be considered hate speech"."""
 
 
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(kw_only=True, weakref_slot=False)
 class PartialAutoModTrigger:
     """Base class representing the content a rule triggers on."""
@@ -189,13 +189,13 @@ class KeywordPresetTrigger(PartialAutoModTrigger):
     """The predefined presets provided by Discord to match against."""
 
 
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(hash=True, kw_only=True, weakref_slot=False)
 class AutoModRule(snowflakes.Unique):
     """Auto moderation rule which defines how user content is filtered."""
 
     app: traits.RESTAware = attr.field(
-        repr=False, eq=False, hash=False, metadata={attr_extensions.SKIP_DEEP_COPY: True}
+        repr=False, eq=False, hash=False, metadata={attrs_extensions.SKIP_DEEP_COPY: True}
     )
     """The client application that models may use for procedures."""
 

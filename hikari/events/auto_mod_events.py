@@ -39,7 +39,7 @@ import attr
 from hikari import intents
 from hikari.events import base_events
 from hikari.events import shard_events
-from hikari.internal import attr_extensions
+from hikari.internal import attrs_extensions
 
 if typing.TYPE_CHECKING:
     from hikari import auto_mod
@@ -56,12 +56,12 @@ class AutoModEvent(shard_events.ShardEvent, abc.ABC):
 
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_CONFIGURATION)
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(kw_only=True, weakref_slot=False)
 class AutoModRuleCreateEvent(AutoModEvent):
     """Event that's fired when an auto-moderation rule is created."""
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attr_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
     rule: auto_mod.AutoModRule = attr.field()
@@ -74,12 +74,12 @@ class AutoModRuleCreateEvent(AutoModEvent):
 
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_CONFIGURATION)
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(kw_only=True, weakref_slot=False)
 class AutoModRuleUpdateEvent(AutoModEvent):
     """Event that's fired when an auto-moderation rule is updated."""
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attr_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
     rule: auto_mod.AutoModRule = attr.field()
@@ -92,12 +92,12 @@ class AutoModRuleUpdateEvent(AutoModEvent):
 
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_CONFIGURATION)
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(kw_only=True, weakref_slot=False)
 class AutoModRuleDeleteEvent(AutoModEvent):
     """Event that's fired when an auto-moderation rule is deleted."""
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attr_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
     rule: auto_mod.AutoModRule = attr.field()
@@ -110,15 +110,15 @@ class AutoModRuleDeleteEvent(AutoModEvent):
 
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_EXECUTION)
-@attr_extensions.with_copy
+@attrs_extensions.with_copy
 @attr.define(kw_only=True, weakref_slot=False)
 class AutoModActionExecutionEvent(AutoModEvent):
     """Event that's fired when an auto-mod action is executed."""
 
-    app: traits.RESTAware = attr.field(metadata={attr_extensions.SKIP_DEEP_COPY: True})
+    app: traits.RESTAware = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from Event>>.
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attr_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
     guild_id: snowflakes.Snowflake = attr.field(repr=True)
