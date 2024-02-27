@@ -34,7 +34,7 @@ __all__: typing.Sequence[str] = (
 import abc
 import typing
 
-import attr
+import attrs
 
 from hikari import intents
 from hikari.events import base_events
@@ -57,14 +57,14 @@ class AutoModEvent(shard_events.ShardEvent, abc.ABC):
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_CONFIGURATION)
 @attrs_extensions.with_copy
-@attr.define(kw_only=True, weakref_slot=False)
+@attrs.define(kw_only=True, weakref_slot=False)
 class AutoModRuleCreateEvent(AutoModEvent):
     """Event that's fired when an auto-moderation rule is created."""
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attrs.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
-    rule: auto_mod.AutoModRule = attr.field()
+    rule: auto_mod.AutoModRule = attrs.field()
     """Object of the auto-moderation rule which was created."""
 
     @property
@@ -75,14 +75,14 @@ class AutoModRuleCreateEvent(AutoModEvent):
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_CONFIGURATION)
 @attrs_extensions.with_copy
-@attr.define(kw_only=True, weakref_slot=False)
+@attrs.define(kw_only=True, weakref_slot=False)
 class AutoModRuleUpdateEvent(AutoModEvent):
     """Event that's fired when an auto-moderation rule is updated."""
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attrs.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
-    rule: auto_mod.AutoModRule = attr.field()
+    rule: auto_mod.AutoModRule = attrs.field()
     """Object of the auto-moderation rule which was updated."""
 
     @property
@@ -93,14 +93,14 @@ class AutoModRuleUpdateEvent(AutoModEvent):
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_CONFIGURATION)
 @attrs_extensions.with_copy
-@attr.define(kw_only=True, weakref_slot=False)
+@attrs.define(kw_only=True, weakref_slot=False)
 class AutoModRuleDeleteEvent(AutoModEvent):
     """Event that's fired when an auto-moderation rule is deleted."""
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attrs.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
-    rule: auto_mod.AutoModRule = attr.field()
+    rule: auto_mod.AutoModRule = attrs.field()
     """Object of the auto-moderation rule which was deleted."""
 
     @property
@@ -111,62 +111,62 @@ class AutoModRuleDeleteEvent(AutoModEvent):
 
 @base_events.requires_intents(intents.Intents.AUTO_MODERATION_EXECUTION)
 @attrs_extensions.with_copy
-@attr.define(kw_only=True, weakref_slot=False)
+@attrs.define(kw_only=True, weakref_slot=False)
 class AutoModActionExecutionEvent(AutoModEvent):
     """Event that's fired when an auto-mod action is executed."""
 
-    app: traits.RESTAware = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
+    app: traits.RESTAware = attrs.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from Event>>.
 
-    shard: gateway_shard.GatewayShard = attr.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
+    shard: gateway_shard.GatewayShard = attrs.field(metadata={attrs_extensions.SKIP_DEEP_COPY: True})
     # <<inherited docstring from ShardEvent>>.
 
-    guild_id: snowflakes.Snowflake = attr.field(repr=True)
+    guild_id: snowflakes.Snowflake = attrs.field(repr=True)
     """ID of the guild this action was executed in."""
 
-    action: auto_mod.PartialAutoModAction = attr.field(repr=False)
+    action: auto_mod.PartialAutoModAction = attrs.field(repr=False)
     """Object of the action which was executed."""
 
-    rule_id: snowflakes.Snowflake = attr.field()
+    rule_id: snowflakes.Snowflake = attrs.field()
     """ID of the rule which was triggered."""
 
-    rule_trigger_type: typing.Union[int, auto_mod.AutoModTriggerType] = attr.field(repr=False)
+    rule_trigger_type: typing.Union[int, auto_mod.AutoModTriggerType] = attrs.field(repr=False)
     """Type of the rule which was triggered."""
 
-    user_id: snowflakes.Snowflake = attr.field(repr=False)
+    user_id: snowflakes.Snowflake = attrs.field(repr=False)
     """ID of the user who generated the context which triggered this."""
 
-    channel_id: typing.Optional[snowflakes.Snowflake] = attr.field(repr=False)
+    channel_id: typing.Optional[snowflakes.Snowflake] = attrs.field(repr=False)
     """ID of the channel the matching context was sent to.
 
     This will be `builtins.None` if the message was blocked by auto-moderation
     of the matched content wasn't in a channel.
     """
 
-    message_id: typing.Optional[snowflakes.Snowflake] = attr.field(repr=False)
+    message_id: typing.Optional[snowflakes.Snowflake] = attrs.field(repr=False)
     """ID of the message the matching context was sent in.
 
     This will be `builtins.None` if the message was blocked by auto-moderation
     or the matched content wasn't in a message.
     """
 
-    alert_system_message_id: typing.Optional[snowflakes.Snowflake] = attr.field(repr=False)
+    alert_system_message_id: typing.Optional[snowflakes.Snowflake] = attrs.field(repr=False)
     """ID of any system auto-moderation messages posted as a result of this action.
 
     This will only be provided for `SEND_ALERT_MESSAGE` actions.
     """
 
-    content: typing.Optional[str] = attr.field(repr=False)
+    content: typing.Optional[str] = attrs.field(repr=False)
     """The user generated content which matched this rule.
 
     This will only be provided if the `MESSAGE_CONTENT` intent has
     been declared.
     """
 
-    matched_keyword: typing.Optional[str] = attr.field(repr=False)
+    matched_keyword: typing.Optional[str] = attrs.field(repr=False)
     """The word or phrase configured in the rule which was triggered, if it's a keyword trigger."""
 
-    matched_content: typing.Optional[str] = attr.field(repr=False)
+    matched_content: typing.Optional[str] = attrs.field(repr=False)
     """The substring in content which triggered the rule.
 
     This will only be provided if the `MESSAGE_CONTENT` intent has
