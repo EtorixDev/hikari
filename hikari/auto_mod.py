@@ -185,7 +185,9 @@ class KeywordPresetTrigger(PartialAutoModTrigger):
     https://discord.com/developers/docs/resources/auto-moderation#auto-moderation-rule-object-keyword-matching-strategies.
     """
 
-    presets: typing.Sequence[typing.Union[int, AutoModKeywordPresetType]] = attrs.field(eq=False, hash=False, repr=False)
+    presets: typing.Sequence[typing.Union[int, AutoModKeywordPresetType]] = attrs.field(
+        eq=False, hash=False, repr=False
+    )
     """The predefined presets provided by Discord to match against."""
 
 

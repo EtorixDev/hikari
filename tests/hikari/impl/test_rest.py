@@ -6551,10 +6551,7 @@ class TestRESTClientImplAsync:
         expected_route = routes.PATCH_GUILD_AUTO_MODERATION_RULE.compile(guild=123321, rule=44332222)
         rest_client._request = mock.AsyncMock(return_value={"id": "494949494"})
 
-        result = await rest_client.edit_auto_mod_rule(
-            StubModel(123321),
-            StubModel(44332222),
-        )
+        result = await rest_client.edit_auto_mod_rule(StubModel(123321), StubModel(44332222))
 
         assert result is rest_client._entity_factory.deserialize_auto_mod_rule.return_value
         rest_client._entity_factory.deserialize_auto_mod_rule.assert_called_once_with(rest_client._request.return_value)

@@ -1433,12 +1433,7 @@ class TestEntityFactoryImpl:
     def partial_integration_payload(self):
         return {"id": "4949494949", "name": "Blah blah", "type": "twitch", "account": {"id": "543453", "name": "Blam"}}
 
-    def test_deserialize_audit_log_entry(
-        self,
-        entity_factory_impl,
-        audit_log_entry_payload,
-        mock_app,
-    ):
+    def test_deserialize_audit_log_entry(self, entity_factory_impl, audit_log_entry_payload, mock_app):
         entry = entity_factory_impl.deserialize_audit_log_entry(
             audit_log_entry_payload, guild_id=snowflakes.Snowflake(123321)
         )
