@@ -49,6 +49,7 @@ if typing.TYPE_CHECKING:
     from hikari.events import lifetime_events
     from hikari.events import member_events
     from hikari.events import message_events
+    from hikari.events import monetization_events
     from hikari.events import reaction_events
     from hikari.events import role_events
     from hikari.events import scheduled_events
@@ -130,7 +131,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_channel : typing.Optional[hikari.channels.PermissibleGuildChannel]
-            The guild channel object or `None`.
+            The guild channel object or [`None`][].
 
         Returns
         -------
@@ -348,7 +349,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_invite : typing.Optional[hikari.invites.InviteWithMetadata]
-            The invite object or `None`.
+            The invite object or [`None`][].
 
         Returns
         -------
@@ -441,7 +442,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_guild : typing.Optional[hikari.guilds.GatewayGuild]
-            The guild object or `None`.
+            The guild object or [`None`][].
 
         Returns
         -------
@@ -469,7 +470,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_guild : typing.Optional[hikari.guilds.GatewayGuild]
-            The guild object or `None`.
+            The guild object or [`None`][].
 
         Returns
         -------
@@ -554,7 +555,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_emojis : typing.Optional[typing.Sequence[hikari.emojis.KnownCustomEmoji]]
-            The sequence of emojis or `None`.
+            The sequence of emojis or [`None`][].
 
         Returns
         -------
@@ -582,7 +583,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_stickers : typing.Optional[typing.Sequence[hikari.stickers.GuildSticker]]
-            The sequence of stickers or `None`.
+            The sequence of stickers or [`None`][].
 
         Returns
         -------
@@ -667,7 +668,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_presence : typing.Optional[hikari.presences.MemberPresence]
-            The presence object or `None`.
+            The presence object or [`None`][].
 
         Returns
         -------
@@ -760,7 +761,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_member : typing.Optional[hikari.guilds.Member]
-            The member object or `None`.
+            The member object or [`None`][].
 
         Returns
         -------
@@ -788,7 +789,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_member : typing.Optional[hikari.guilds.Member]
-            The member object or `None`.
+            The member object or [`None`][].
 
         Returns
         -------
@@ -839,7 +840,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_role : typing.Optional[hikari.guilds.Role]
-            The role object or `None`.
+            The role object or [`None`][].
 
         Returns
         -------
@@ -867,7 +868,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_role : typing.Optional[hikari.guilds.Role]
-            The role object or `None`.
+            The role object or [`None`][].
 
         Returns
         -------
@@ -1061,7 +1062,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_message : typing.Optional[hikari.messages.PartialMessage]
-            The message object or `None`.
+            The message object or [`None`][].
 
         Returns
         -------
@@ -1337,7 +1338,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_user : typing.Optional[hikari.users.OwnUser]
-            The OwnUser object or `None`.
+            The OwnUser object or [`None`][].
 
         Returns
         -------
@@ -1369,7 +1370,7 @@ class EventFactory(abc.ABC):
         Other Parameters
         ----------------
         old_state : typing.Optional[hikari.voices.VoiceState]
-            The VoiceState object or `None`.
+            The VoiceState object or [`None`][].
 
         Returns
         -------
@@ -1470,4 +1471,65 @@ class EventFactory(abc.ABC):
         -------
         hikari.events.voice_events.AutoModActionExecutionEvent
             The parsed auto-mod action execution event object.
+        """
+
+    ##################
+    #  MONETIZATION  #
+    ##################
+
+    @abc.abstractmethod
+    def deserialize_entitlement_create_event(
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
+    ) -> monetization_events.EntitlementCreateEvent:
+        """Parse a raw payload from Discord into a entitlement create event object.
+
+        Parameters
+        ----------
+        shard : hikari.api.shard.GatewayShard
+            The shard that emitted this event.
+        payload : hikari.internal.data_binding.JSONObject
+            The dict payload to parse.
+
+        Returns
+        -------
+        hikari.events.entitlement_events.EntitlementCreateEvent
+            The parsed entitlement create event object.
+        """
+
+    @abc.abstractmethod
+    def deserialize_entitlement_delete_event(
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
+    ) -> monetization_events.EntitlementDeleteEvent:
+        """Parse a raw payload from Discord into a entitlement delete event object.
+
+        Parameters
+        ----------
+        shard : hikari.api.shard.GatewayShard
+            The shard that emitted this event.
+        payload : hikari.internal.data_binding.JSONObject
+            The dict payload to parse.
+
+        Returns
+        -------
+        hikari.events.entitlement_events.EntitlementDeleteEvent
+            The parsed entitlement delete event object.
+        """
+
+    @abc.abstractmethod
+    def deserialize_entitlement_update_event(
+        self, shard: gateway_shard.GatewayShard, payload: data_binding.JSONObject
+    ) -> monetization_events.EntitlementUpdateEvent:
+        """Parse a raw payload from Discord into a entitlement update event object.
+
+        Parameters
+        ----------
+        shard : hikari.api.shard.GatewayShard
+            The shard that emitted this event.
+        payload : hikari.internal.data_binding.JSONObject
+            The dict payload to parse.
+
+        Returns
+        -------
+        hikari.events.entitlement_events.EntitlementUpdateEvent
+            The parsed entitlement update event object.
         """
