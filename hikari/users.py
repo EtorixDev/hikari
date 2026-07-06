@@ -22,7 +22,17 @@
 
 from __future__ import annotations
 
-__all__: typing.Sequence[str] = ("OwnUser", "PartialUser", "PremiumType", "PrimaryGuild", "User", "UserFlag")
+__all__: typing.Sequence[str] = (
+    "Collectibles",
+    "Nameplate",
+    "NameplatePalette",
+    "OwnUser",
+    "PartialUser",
+    "PremiumType",
+    "PrimaryGuild",
+    "User",
+    "UserFlag",
+)
 
 import abc
 import typing
@@ -139,6 +149,69 @@ class PremiumType(int, enums.Enum):
 
     NITRO_BASIC = 3
     """Premium tier including basic perks (e.g. animated emojis and avatars)."""
+
+
+@typing.final
+class NameplatePalette(str, enums.Enum):
+    """The background colors that Discord supports for nameplates."""
+
+    CRIMSON = "crimson"
+    """Crimson."""
+
+    BERRY = "berry"
+    """Berry."""
+
+    SKY = "sky"
+    """Sky."""
+
+    TEAL = "teal"
+    """Teal."""
+
+    FOREST = "forest"
+    """Forest."""
+
+    BUBBLE_GUM = "bubble_gum"
+    """Bubble gum."""
+
+    VIOLET = "violet"
+    """Violet."""
+
+    COBALT = "cobalt"
+    """Cobalt."""
+
+    CLOVER = "clover"
+    """Clover."""
+
+    LEMON = "lemon"
+    """Lemon."""
+
+    WHITE = "white"
+    """White."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class Nameplate:
+    """Data for a user's nameplate."""
+
+    sku_id: snowflakes.Snowflake = attrs.field(repr=True)
+    """The ID of the nameplate's SKU."""
+
+    asset_path: str = attrs.field(repr=True)
+    """The nameplate asset path."""
+
+    label: str = attrs.field(repr=True)
+    """The nameplate's label."""
+
+    palette: NameplatePalette | str = attrs.field(repr=True)
+    """The nameplate's background color."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class Collectibles:
+    """Data for a user's collectibles."""
+
+    nameplate: Nameplate | None = attrs.field(repr=True)
+    """The user's nameplate, if they have one."""
 
 
 @attrs.define(kw_only=True, weakref_slot=False)
@@ -298,6 +371,11 @@ class PartialUser(snowflakes.Unique, abc.ABC):
     @abc.abstractmethod
     def avatar_decoration(self) -> undefined.UndefinedNoneOr[AvatarDecoration]:
         """Avatar decoration for the user, if they have one, otherwise [`None`][]."""
+
+    @property
+    @abc.abstractmethod
+    def collectibles(self) -> undefined.UndefinedNoneOr[Collectibles]:
+        """Collectibles for the user, if they have any, otherwise [`None`][]."""
 
     @property
     @abc.abstractmethod
@@ -644,6 +722,12 @@ class User(PartialUser, abc.ABC):
     @property
     @abc.abstractmethod
     @typing_extensions.override
+    def collectibles(self) -> Collectibles | None:
+        """Collectibles for the user, if they have any, otherwise [`None`][]."""
+
+    @property
+    @abc.abstractmethod
+    @typing_extensions.override
     def avatar_hash(self) -> str | None:
         """Avatar hash for the user, if they have one, otherwise [`None`][]."""
 
@@ -888,6 +972,9 @@ class PartialUserImpl(PartialUser):
     avatar_decoration: undefined.UndefinedNoneOr[AvatarDecoration] = attrs.field(eq=False, hash=False, repr=False)
     """Avatar decoration of the user, if an avatar decoration is set."""
 
+    collectibles: undefined.UndefinedNoneOr[Collectibles] = attrs.field(eq=False, hash=False, repr=False)
+    """Collectibles of the user, if any are set."""
+
     avatar_hash: undefined.UndefinedNoneOr[str] = attrs.field(eq=False, hash=False, repr=False)
     """Avatar hash of the user, if a custom avatar is set."""
 
@@ -956,6 +1043,9 @@ class UserImpl(PartialUserImpl, User):
 
     avatar_decoration: AvatarDecoration | None = attrs.field(eq=False, hash=False, repr=False)
     """Avatar decoration of the user, if they have one."""
+
+    collectibles: Collectibles | None = attrs.field(eq=False, hash=False, repr=False)
+    """Collectibles of the user, if any are set."""
 
     avatar_hash: str | None = attrs.field(eq=False, hash=False, repr=False)
     """The user's avatar hash, if they have one, otherwise [`None`][]."""

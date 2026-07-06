@@ -1857,11 +1857,13 @@ class TestCacheImpl:
 
     def test__build_member(self, cache_impl):
         mock_user = mock.MagicMock(users.User)
+        mock_collectibles = mock.Mock(users.Collectibles)
         member_data = cache_utilities.MemberData(
             user=cache_utilities.RefCell(mock_user),
             guild_id=snowflakes.Snowflake(6434435234),
             nickname="NICK",
             guild_avatar_decoration=None,
+            guild_collectibles=mock_collectibles,
             guild_avatar_hash="only slightly gay",
             guild_banner_hash="ok maybe alotta gay",
             role_ids=(snowflakes.Snowflake(65234), snowflakes.Snowflake(654234123)),
@@ -1882,6 +1884,7 @@ class TestCacheImpl:
         assert member.user is not mock_user
         assert member.guild_id == 6434435234
         assert member.nickname == "NICK"
+        assert member.guild_collectibles is mock_collectibles
         assert member.guild_avatar_hash == "only slightly gay"
         assert member.guild_banner_hash == "ok maybe alotta gay"
         assert member.role_ids == (snowflakes.Snowflake(65234), snowflakes.Snowflake(654234123))
@@ -2212,6 +2215,7 @@ class TestCacheImpl:
     def test_set_member(self, cache_impl):
         mock_user = mock.Mock(users.User, id=snowflakes.Snowflake(645234123))
         mock_user_ref = cache_utilities.RefCell(mock_user)
+        mock_collectibles = mock.Mock(users.Collectibles)
         member_model = guilds.Member(
             guild_id=snowflakes.Snowflake(67345234),
             user=mock_user,
@@ -2221,6 +2225,7 @@ class TestCacheImpl:
             premium_since=datetime.datetime(2020, 7, 1, 2, 0, 12, 501602, tzinfo=datetime.timezone.utc),
             is_deaf=True,
             guild_avatar_decoration=None,
+            guild_collectibles=mock_collectibles,
             guild_avatar_hash="gay",
             guild_banner_hash="gayge",
             is_mute=False,
@@ -2247,6 +2252,7 @@ class TestCacheImpl:
         assert member_entry.object.nickname == "A NICK LOL"
         assert member_entry.object.role_ids == (65345234, 123123)
         assert member_entry.object.role_ids is not member_model.role_ids
+        assert member_entry.object.guild_collectibles is mock_collectibles
         assert member_entry.object.guild_avatar_hash == "gay"
         assert member_entry.object.guild_banner_hash == "gayge"
         assert isinstance(member_entry.object.role_ids, tuple)

@@ -508,6 +508,24 @@ class EventFactoryImpl(event_factory.EventFactory):
                 raw_accent_color = user_payload["accent_color"]
                 accent_color = colors.Color(raw_accent_color) if raw_accent_color is not None else raw_accent_color
 
+            collectibles: undefined.UndefinedNoneOr[user_models.Collectibles] = undefined.UNDEFINED
+            if (raw_collectibles := user_payload.get("collectibles", undefined.UNDEFINED)) is not undefined.UNDEFINED:
+                if raw_collectibles is None:
+                    collectibles = None
+                else:
+                    raw_nameplate = raw_collectibles.get("nameplate")
+                    nameplate = (
+                        user_models.Nameplate(
+                            sku_id=snowflakes.Snowflake(raw_nameplate["sku_id"]),
+                            asset_path=raw_nameplate["asset"],
+                            label=raw_nameplate["label"],
+                            palette=user_models.NameplatePalette(raw_nameplate["palette"]),
+                        )
+                        if raw_nameplate
+                        else None
+                    )
+                    collectibles = user_models.Collectibles(nameplate=nameplate)
+
             user = user_models.PartialUserImpl(
                 app=self._app,
                 id=snowflakes.Snowflake(user_payload["id"]),
@@ -515,6 +533,7 @@ class EventFactoryImpl(event_factory.EventFactory):
                 username=user_payload.get("username", undefined.UNDEFINED),
                 global_name=user_payload.get("global_name", undefined.UNDEFINED),
                 avatar_decoration=None,
+                collectibles=collectibles,
                 primary_guild=user_payload.get("primary_guild", undefined.UNDEFINED),
                 avatar_hash=user_payload.get("avatar", undefined.UNDEFINED),
                 banner_hash=user_payload.get("banner", undefined.UNDEFINED),
