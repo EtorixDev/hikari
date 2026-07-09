@@ -2140,18 +2140,18 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
         *,
         guild_id: undefined.UndefinedOr[snowflakes.Snowflake] = undefined.UNDEFINED,
     ) -> guild_models.SupplementalGuildMember:
-        if guild_id is undefined.UNDEFINED and "guild_id" in payload:
-            guild_id = snowflakes.Snowflake(payload["guild_id"])
+        if guild_id is undefined.UNDEFINED:
+            if "guild_id" in payload:
+                guild_id = snowflakes.Snowflake(payload["guild_id"])
+            elif "member" in payload and "guild_id" in payload["member"]:
+                guild_id = snowflakes.Snowflake(payload["member"]["guild_id"])
+            else:
+                msg = "guild_id"
+                raise KeyError(msg)
 
         member: undefined.UndefinedOr[guild_models.Member] = undefined.UNDEFINED
         if "member" in payload:
             member = self.deserialize_member(payload["member"], guild_id=guild_id)
-
-        if guild_id is undefined.UNDEFINED:
-            if member is not undefined.UNDEFINED:
-                guild_id = member.guild_id
-            else:
-                guild_id = snowflakes.Snowflake(payload["guild_id"])
 
         user_id: undefined.UndefinedOr[snowflakes.Snowflake] = undefined.UNDEFINED
         if "user_id" in payload:

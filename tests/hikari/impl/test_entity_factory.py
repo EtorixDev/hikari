@@ -3526,6 +3526,21 @@ class TestEntityFactoryImpl:
         assert supplemental_member.join_source_application_id == 98765
         assert supplemental_member.join_source_channel_id is None
 
+    def test_deserialize_supplemental_guild_member_when_nested_member_has_guild_id(
+        self, entity_factory_impl, member_payload
+    ):
+        member_payload = {**member_payload, "guild_id": "12345"}
+
+        supplemental_member = entity_factory_impl.deserialize_supplemental_guild_member({"member": member_payload})
+
+        assert supplemental_member.guild_id == 12345
+        assert supplemental_member.user_id == 115590097100865541
+        assert supplemental_member.member == entity_factory_impl.deserialize_member(member_payload)
+
+    def test_deserialize_supplemental_guild_member_when_guild_id_unknown(self, entity_factory_impl, member_payload):
+        with pytest.raises(KeyError, match="guild_id"):
+            entity_factory_impl.deserialize_supplemental_guild_member({"member": member_payload})
+
     def test_deserialize_supplemental_guild_member_with_missing_optional_fields(self, entity_factory_impl):
         supplemental_member = entity_factory_impl.deserialize_supplemental_guild_member(
             {"user_id": "123", "join_source_type": 999}, guild_id=snowflakes.Snowflake(456)
