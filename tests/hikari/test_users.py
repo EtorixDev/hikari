@@ -182,6 +182,57 @@ class TestPartialUser:
         obj.app.rest.create_dm_channel.assert_awaited_once_with(123)
 
 
+class TestNameplate:
+    @pytest.fixture
+    def obj(self):
+        return users.Nameplate(
+            sku_id=snowflakes.Snowflake(123),
+            asset_path="/nameplates/nameplates/twilight/",
+            label="COLLECTIBLES_NAMEPLATES_TWILIGHT_A11Y",
+            palette=users.NameplatePalette.COBALT,
+        )
+
+    def test_make_url_defaults_to_webm(self, obj):
+        assert obj.make_url().url == (
+            f"{urls.COLLECTIBLES_ASSET_BASE_URL}/nameplates/nameplates/twilight/asset.webm"
+        )
+
+    @pytest.mark.parametrize(
+        ("file_format", "path"),
+        [
+            ("WEBM", "asset.webm"),
+            ("WEBP", "img.png?format=webp"),
+            ("JPG", "img.png?format=jpeg"),
+            ("JPEG", "img.png?format=jpeg"),
+            ("PNG", "static.png"),
+            ("APNG", "img.png"),
+        ],
+    )
+    def test_make_url_uses_expected_path_for_format(self, obj, file_format, path):
+        assert obj.make_url(file_format=file_format).url == (
+            f"{urls.COLLECTIBLES_ASSET_BASE_URL}/nameplates/nameplates/twilight/{path}"
+        )
+
+    def test_make_url_is_case_insensitive(self, obj):
+        assert obj.make_url(file_format="webp").url == (
+            f"{urls.COLLECTIBLES_ASSET_BASE_URL}/nameplates/nameplates/twilight/img.png?format=webp"
+        )
+
+    def test_make_url_quotes_asset_path_without_quoting_slashes(self):
+        nameplate = users.Nameplate(
+            sku_id=snowflakes.Snowflake(123),
+            asset_path="/nameplates/custom path/",
+            label="COLLECTIBLES_NAMEPLATES_CUSTOM_A11Y",
+            palette=users.NameplatePalette.COBALT,
+        )
+
+        assert nameplate.make_url().url == f"{urls.COLLECTIBLES_ASSET_BASE_URL}/nameplates/custom%20path/asset.webm"
+
+    def test_make_url_raises_TypeError_when_format_is_invalid(self, obj):
+        with pytest.raises(TypeError, match="GIF is not a valid format for this asset"):
+            obj.make_url(file_format="GIF")
+
+
 class TestUser:
     @pytest.fixture
     def obj(self):

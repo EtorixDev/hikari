@@ -36,9 +36,11 @@ __all__: typing.Sequence[str] = (
 
 import abc
 import typing
+import urllib.parse
 
 import attrs
 
+from hikari import files
 from hikari import snowflakes
 from hikari import traits
 from hikari import undefined
@@ -59,11 +61,20 @@ if typing.TYPE_CHECKING:
     from hikari import channels
     from hikari import colors
     from hikari import embeds as embeds_
-    from hikari import files
     from hikari import guilds
     from hikari import locales
     from hikari import messages
     from hikari.api import special_endpoints
+
+
+_NAMEPLATE_FORMAT_PATHS: typing.Final[dict[str, str]] = {
+    "WEBM": "asset.webm",
+    "WEBP": "img.png?format=webp",
+    "JPG": "img.png?format=jpeg",
+    "JPEG": "img.png?format=jpeg",
+    "PNG": "static.png",
+    "APNG": "img.png",
+}
 
 
 @typing.final
@@ -204,6 +215,48 @@ class Nameplate:
 
     palette: NameplatePalette | str = attrs.field(repr=True)
     """The nameplate's background color."""
+
+    def make_url(
+        self,
+        *,
+        file_format: undefined.UndefinedOr[
+            typing.Literal["WEBM", "PNG", "JPEG", "JPG", "WEBP", "APNG"]
+        ] = undefined.UNDEFINED,
+    ) -> files.URL:
+        """Generate the asset URL for this nameplate.
+
+        Parameters
+        ----------
+        file_format
+            The format to use for this URL.
+
+            Supports `WEBM`, `PNG`, `JPEG`, `JPG`, `WEBP`, and `APNG`.
+
+            If not specified, the format will be `WEBM`.
+
+        Returns
+        -------
+        hikari.files.URL
+            The URL to the nameplate asset.
+
+        Raises
+        ------
+        TypeError
+            If an invalid format is passed for `file_format`.
+        """
+        requested_format = "WEBM" if not file_format else file_format.upper()
+
+        try:
+            path = _NAMEPLATE_FORMAT_PATHS[requested_format]
+        except KeyError:
+            msg = (
+                f"{requested_format} is not a valid format for this asset. Valid formats are: "
+                + ", ".join(_NAMEPLATE_FORMAT_PATHS)
+            )
+            raise TypeError(msg) from None
+
+        asset_path = urllib.parse.quote(self.asset_path.strip("/"), safe="/")
+        return files.URL(f"{urls.COLLECTIBLES_ASSET_BASE_URL}/{asset_path}/{path}")
 
 
 @attrs.define(kw_only=True, weakref_slot=False)
