@@ -3500,6 +3500,81 @@ class TestEntityFactoryImpl:
         assert member.user is mock_user
         assert member.guild_id == 64234
 
+    def test_deserialize_supplemental_guild_member(self, entity_factory_impl, member_payload):
+        supplemental_member = entity_factory_impl.deserialize_supplemental_guild_member(
+            {
+                "member": member_payload,
+                "join_source_type": guild_models.GuildMemberJoinSourceType.INVITE.value,
+                "source_invite_code": "abc123",
+                "inviter_id": "54321",
+                "integration_type": None,
+                "join_source_application_id": "98765",
+                "join_source_channel_id": None,
+            },
+            guild_id=snowflakes.Snowflake(12345),
+        )
+
+        assert supplemental_member.guild_id == 12345
+        assert supplemental_member.user_id == 115590097100865541
+        assert supplemental_member.member == entity_factory_impl.deserialize_member(
+            member_payload, guild_id=snowflakes.Snowflake(12345)
+        )
+        assert supplemental_member.join_source_type is guild_models.GuildMemberJoinSourceType.INVITE
+        assert supplemental_member.source_invite_code == "abc123"
+        assert supplemental_member.inviter_id == 54321
+        assert supplemental_member.integration_type is None
+        assert supplemental_member.join_source_application_id == 98765
+        assert supplemental_member.join_source_channel_id is None
+
+    def test_deserialize_supplemental_guild_member_with_missing_optional_fields(self, entity_factory_impl):
+        supplemental_member = entity_factory_impl.deserialize_supplemental_guild_member(
+            {"user_id": "123", "join_source_type": 999}, guild_id=snowflakes.Snowflake(456)
+        )
+
+        assert supplemental_member.guild_id == 456
+        assert supplemental_member.user_id == 123
+        assert supplemental_member.member is undefined.UNDEFINED
+        assert supplemental_member.join_source_type == 999
+        assert supplemental_member.source_invite_code is undefined.UNDEFINED
+        assert supplemental_member.inviter_id is undefined.UNDEFINED
+        assert supplemental_member.integration_type is undefined.UNDEFINED
+        assert supplemental_member.join_source_application_id is undefined.UNDEFINED
+        assert supplemental_member.join_source_channel_id is undefined.UNDEFINED
+
+    def test_deserialize_guild_member_search_result(self, entity_factory_impl, member_payload):
+        result = entity_factory_impl.deserialize_guild_member_search_result(
+            {
+                "guild_id": "12345",
+                "members": [{"member": member_payload, "join_source_type": 5}],
+                "page_result_count": 1,
+                "total_result_count": 12,
+            }
+        )
+
+        assert result.guild_id == 12345
+        assert len(result.members) == 1
+        assert result.members[0].guild_id == 12345
+        assert result.members[0].member == entity_factory_impl.deserialize_member(
+            member_payload, guild_id=snowflakes.Snowflake(12345)
+        )
+        assert result.page_result_count == 1
+        assert result.total_result_count == 12
+
+    def test_deserialize_guild_member_search_index_not_ready(self, entity_factory_impl):
+        result = entity_factory_impl.deserialize_guild_member_search_index_not_ready(
+            {
+                "message": "Index not yet available. Try again later",
+                "code": 110000,
+                "documents_indexed": 2,
+                "retry_after": 15,
+            }
+        )
+
+        assert result.message == "Index not yet available. Try again later"
+        assert result.code == 110000
+        assert result.documents_indexed == 2
+        assert result.retry_after == 15.0
+
     def test_deserialize_role(self, entity_factory_impl, mock_app, guild_role_payload):
         guild_role = entity_factory_impl.deserialize_role(guild_role_payload, guild_id=snowflakes.Snowflake(76534453))
         assert guild_role.app is mock_app

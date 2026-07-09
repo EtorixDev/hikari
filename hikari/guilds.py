@@ -31,6 +31,9 @@ __all__: typing.Sequence[str] = (
     "GuildIncidents",
     "GuildMFALevel",
     "GuildMemberFlags",
+    "GuildMemberJoinSourceType",
+    "GuildMemberSearchIndexNotReady",
+    "GuildMemberSearchResult",
     "GuildMessageNotificationsLevel",
     "GuildNSFWLevel",
     "GuildPremiumTier",
@@ -44,12 +47,19 @@ __all__: typing.Sequence[str] = (
     "IntegrationExpireBehaviour",
     "IntegrationType",
     "Member",
+    "MemberSearchFilter",
+    "MemberSearchPaginationFilter",
+    "MemberSearchQuery",
+    "MemberSearchRangeQuery",
+    "MemberSearchSafetySignals",
+    "MemberSearchSortType",
     "PartialApplication",
     "PartialGuild",
     "PartialIntegration",
     "PartialRole",
     "RESTGuild",
     "Role",
+    "SupplementalGuildMember",
     "WelcomeChannel",
     "WelcomeScreen",
 )
@@ -379,6 +389,163 @@ class GuildMemberFlags(enums.Flag):
 
     STARTED_ONBOARDING = 1 << 3
     """Member has started onboarding."""
+
+    IS_GUEST = 1 << 4
+    """Member is a guest and not a true member."""
+
+    STARTED_HOME_ACTIONS = 1 << 5
+    """Member has started the new member actions in the server guide."""
+
+    COMPLETED_HOME_ACTIONS = 1 << 6
+    """Member has completed all of the new member actions in the server guide."""
+
+    AUTOMOD_QUARANTINED_NAME = 1 << 7
+    """Member has been indefinitely quarantined by AutoMod for their name."""
+
+    DM_SETTINGS_UPSELL_ACKNOWLEDGED = 1 << 9
+    """Member has acknowledged the DM privacy settings upsell modal."""
+
+    AUTOMOD_QUARANTINED_GUILD_TAG = 1 << 10
+    """Member has been indefinitely quarantined by AutoMod for their primary guild tag."""
+
+
+@typing.final
+class MemberSearchSortType(int, enums.Enum):
+    """The sorting strategy to use when searching guild members."""
+
+    JOINED_AT_DESC = 1
+    """Sort by when the user joined the guild descending."""
+
+    JOINED_AT_ASC = 2
+    """Sort by when the user joined the guild ascending."""
+
+    USER_ID_DESC = 3
+    """Sort by when the user joined Discord descending."""
+
+    USER_ID_ASC = 4
+    """Sort by when the user joined Discord ascending."""
+
+
+@typing.final
+class GuildMemberJoinSourceType(int, enums.Enum):
+    """How a user joined a guild."""
+
+    UNSPECIFIED = 0
+    """The user joined through an unknown source."""
+
+    BOT = 1
+    """The user was added by a bot using the `guilds.join` OAuth2 scope."""
+
+    INTEGRATION = 2
+    """The user was added by an integration."""
+
+    DISCOVERY = 3
+    """The user joined through guild discovery."""
+
+    HUB = 4
+    """The user joined through a student hub."""
+
+    INVITE = 5
+    """The user joined through an invite."""
+
+    VANITY_URL = 6
+    """The user joined through a vanity URL."""
+
+    MANUAL_MEMBER_VERIFICATION = 7
+    """The user was accepted after applying for membership."""
+
+    SOCIAL_LAYER_INTEGRATION_LINKED_CHANNEL = 8
+    """The user joined through a linked lobby."""
+
+
+_MemberSearchQueryValue = snowflakes.SnowflakeishOr[snowflakes.Unique] | str | GuildMemberJoinSourceType
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class MemberSearchRangeQuery:
+    """A bounded range to match a guild member search field against."""
+
+    gte: undefined.UndefinedOr[_MemberSearchQueryValue] = attrs.field(default=undefined.UNDEFINED)
+    """Inclusive lower bound value to match."""
+
+    lte: undefined.UndefinedOr[_MemberSearchQueryValue] = attrs.field(default=undefined.UNDEFINED)
+    """Inclusive upper bound value to match."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class MemberSearchQuery:
+    """Values and ranges to match a guild member search field against."""
+
+    or_query: undefined.UndefinedOr[typing.Sequence[_MemberSearchQueryValue]] = attrs.field(default=undefined.UNDEFINED)
+    """Values to match using OR logic."""
+
+    and_query: undefined.UndefinedOr[typing.Sequence[_MemberSearchQueryValue]] = attrs.field(
+        default=undefined.UNDEFINED
+    )
+    """Values to match using AND logic."""
+
+    range: undefined.UndefinedOr[MemberSearchRangeQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Range of values to match."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class MemberSearchSafetySignals:
+    """Safety-signal criteria to match members against."""
+
+    unusual_dm_activity_until: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query for when the member's unusual DM activity flag will expire."""
+
+    communication_disabled_until: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query for when the member's timeout will expire."""
+
+    unusual_account_activity: undefined.UndefinedOr[bool] = attrs.field(default=undefined.UNDEFINED)
+    """Whether the user has unusual account activity."""
+
+    automod_quarantined_username: undefined.UndefinedOr[bool] = attrs.field(default=undefined.UNDEFINED)
+    """Whether the member was quarantined by AutoMod for their username, display name, or nickname."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class MemberSearchFilter:
+    """Criteria to match members against in a guild member search."""
+
+    user_id: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query to match member user IDs against."""
+
+    usernames: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query to match display names, usernames, and nicknames against."""
+
+    role_ids: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query to match member role IDs against."""
+
+    guild_joined_at: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query for when members joined the guild, as Unix timestamps in milliseconds."""
+
+    safety_signals: undefined.UndefinedOr[MemberSearchSafetySignals] = attrs.field(default=undefined.UNDEFINED)
+    """Safety-signal criteria to match members against."""
+
+    is_pending: undefined.UndefinedOr[bool] = attrs.field(default=undefined.UNDEFINED)
+    """Whether the member has not passed the guild's member verification requirements."""
+
+    did_rejoin: undefined.UndefinedOr[bool] = attrs.field(default=undefined.UNDEFINED)
+    """Whether the member left and rejoined the guild."""
+
+    join_source_type: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query for how the user joined the guild."""
+
+    source_invite_code: undefined.UndefinedOr[MemberSearchQuery] = attrs.field(default=undefined.UNDEFINED)
+    """Query for the invite code or vanity URL used to join the guild."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class MemberSearchPaginationFilter:
+    """A member cursor used to paginate guild member search results."""
+
+    user_id: snowflakes.SnowflakeishOr[users.PartialUser] = attrs.field()
+    """The ID of the user to paginate past."""
+
+    guild_joined_at: int = attrs.field()
+    """Unix timestamp in milliseconds of when the user to paginate past joined the guild."""
 
 
 @attrs.define(kw_only=True, weakref_slot=False)
@@ -1136,6 +1303,72 @@ class Member(users.User):
     @typing_extensions.override
     def __eq__(self, other: object) -> bool:
         return self.user == other
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class SupplementalGuildMember:
+    """Additional guild member information returned by member search endpoints."""
+
+    guild_id: snowflakes.Snowflake = attrs.field(repr=True)
+    """The ID of the guild this supplemental member belongs to."""
+
+    user_id: undefined.UndefinedOr[snowflakes.Snowflake] = attrs.field(repr=True)
+    """The ID of the user this guild member represents, if included."""
+
+    member: undefined.UndefinedOr[Member] = attrs.field(repr=True)
+    """The associated guild member, if included."""
+
+    join_source_type: undefined.UndefinedOr[GuildMemberJoinSourceType | int] = attrs.field(repr=True)
+    """How the user joined the guild, if included."""
+
+    source_invite_code: undefined.UndefinedNoneOr[str] = attrs.field(repr=True)
+    """The invite code or vanity URL used to join the guild, if applicable."""
+
+    inviter_id: undefined.UndefinedNoneOr[snowflakes.Snowflake] = attrs.field(repr=True)
+    """The ID of the user or integration that invited the user, if applicable."""
+
+    integration_type: undefined.UndefinedNoneOr[str] = attrs.field(repr=True)
+    """The type of integration that added the user to the guild, if applicable."""
+
+    join_source_application_id: undefined.UndefinedNoneOr[snowflakes.Snowflake] = attrs.field(repr=True)
+    """The ID of the application that owns the linked lobby, if applicable."""
+
+    join_source_channel_id: undefined.UndefinedNoneOr[snowflakes.Snowflake] = attrs.field(repr=True)
+    """The ID of the channel the linked lobby is linked to, if applicable."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class GuildMemberSearchResult:
+    """The successful result of searching guild members."""
+
+    guild_id: snowflakes.Snowflake = attrs.field(repr=True)
+    """The ID of the guild searched."""
+
+    members: typing.Sequence[SupplementalGuildMember] = attrs.field(repr=True)
+    """The resulting supplemental guild member objects."""
+
+    page_result_count: int = attrs.field(repr=True)
+    """The number of results returned in this page."""
+
+    total_result_count: int = attrs.field(repr=True)
+    """The total number of matching results found."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class GuildMemberSearchIndexNotReady:
+    """The accepted response returned when a guild member search index is not ready."""
+
+    message: str = attrs.field(repr=True)
+    """The message returned by Discord."""
+
+    code: int = attrs.field(repr=True)
+    """Discord's error-like code for the accepted response."""
+
+    documents_indexed: int = attrs.field(repr=True)
+    """The number of documents indexed so far."""
+
+    retry_after: float = attrs.field(repr=True)
+    """The number of seconds to wait before retrying."""
 
 
 @attrs_extensions.with_copy

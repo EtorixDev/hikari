@@ -62,6 +62,44 @@ def test_PartialApplication_str_operator():
     assert guilds.PartialApplication.__str__(mock_application) == "beans"
 
 
+def test_member_search_sort_type_values():
+    assert guilds.MemberSearchSortType.JOINED_AT_DESC == 1
+    assert guilds.MemberSearchSortType.JOINED_AT_ASC == 2
+    assert guilds.MemberSearchSortType.USER_ID_DESC == 3
+    assert guilds.MemberSearchSortType.USER_ID_ASC == 4
+
+
+def test_guild_member_join_source_type_values():
+    assert guilds.GuildMemberJoinSourceType.UNSPECIFIED == 0
+    assert guilds.GuildMemberJoinSourceType.BOT == 1
+    assert guilds.GuildMemberJoinSourceType.INTEGRATION == 2
+    assert guilds.GuildMemberJoinSourceType.DISCOVERY == 3
+    assert guilds.GuildMemberJoinSourceType.HUB == 4
+    assert guilds.GuildMemberJoinSourceType.INVITE == 5
+    assert guilds.GuildMemberJoinSourceType.VANITY_URL == 6
+    assert guilds.GuildMemberJoinSourceType.MANUAL_MEMBER_VERIFICATION == 7
+    assert guilds.GuildMemberJoinSourceType.SOCIAL_LAYER_INTEGRATION_LINKED_CHANNEL == 8
+
+
+def test_member_search_filter_models_preserve_values():
+    range_query = guilds.MemberSearchRangeQuery(gte=123, lte=456)
+    query = guilds.MemberSearchQuery(or_query=["nyaa"], range=range_query)
+    safety_signals = guilds.MemberSearchSafetySignals(unusual_account_activity=True)
+    member_filter = guilds.MemberSearchFilter(
+        usernames=query, safety_signals=safety_signals, is_pending=False, did_rejoin=True
+    )
+    pagination = guilds.MemberSearchPaginationFilter(user_id=123, guild_joined_at=1_700_000_000_000)
+
+    assert member_filter.usernames is query
+    assert member_filter.safety_signals is safety_signals
+    assert member_filter.is_pending is False
+    assert member_filter.did_rejoin is True
+    assert member_filter.user_id is undefined.UNDEFINED
+    assert query.range is range_query
+    assert pagination.user_id == 123
+    assert pagination.guild_joined_at == 1_700_000_000_000
+
+
 class TestPartialApplication:
     @pytest.fixture
     def model(self):

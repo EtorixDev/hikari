@@ -92,6 +92,16 @@ def _with_int_cast(cast: typing.Callable[[int], ValueT]) -> typing.Callable[[typ
     return lambda value: cast(int(value))
 
 
+def _deserialize_optional_snowflake(
+    payload: data_binding.JSONObject, key: str
+) -> undefined.UndefinedNoneOr[snowflakes.Snowflake]:
+    if key not in payload:
+        return undefined.UNDEFINED
+
+    value = payload[key]
+    return None if value is None else snowflakes.Snowflake(value)
+
+
 def _deserialize_seconds_timedelta(seconds: str | int) -> datetime.timedelta:
     return datetime.timedelta(seconds=int(seconds))
 
@@ -2121,6 +2131,76 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             is_pending=payload.get("pending", undefined.UNDEFINED),
             raw_communication_disabled_until=communication_disabled_until,
             guild_flags=guild_flags,
+        )
+
+    @typing_extensions.override
+    def deserialize_supplemental_guild_member(
+        self,
+        payload: data_binding.JSONObject,
+        *,
+        guild_id: undefined.UndefinedOr[snowflakes.Snowflake] = undefined.UNDEFINED,
+    ) -> guild_models.SupplementalGuildMember:
+        if guild_id is undefined.UNDEFINED and "guild_id" in payload:
+            guild_id = snowflakes.Snowflake(payload["guild_id"])
+
+        member: undefined.UndefinedOr[guild_models.Member] = undefined.UNDEFINED
+        if "member" in payload:
+            member = self.deserialize_member(payload["member"], guild_id=guild_id)
+
+        if guild_id is undefined.UNDEFINED:
+            if member is not undefined.UNDEFINED:
+                guild_id = member.guild_id
+            else:
+                guild_id = snowflakes.Snowflake(payload["guild_id"])
+
+        user_id: undefined.UndefinedOr[snowflakes.Snowflake] = undefined.UNDEFINED
+        if "user_id" in payload:
+            user_id = snowflakes.Snowflake(payload["user_id"])
+        elif member is not undefined.UNDEFINED:
+            user_id = member.id
+
+        join_source_type: undefined.UndefinedOr[guild_models.GuildMemberJoinSourceType | int] = undefined.UNDEFINED
+        if "join_source_type" in payload:
+            join_source_type = guild_models.GuildMemberJoinSourceType(payload["join_source_type"])
+
+        return guild_models.SupplementalGuildMember(
+            guild_id=guild_id,
+            user_id=user_id,
+            member=member,
+            join_source_type=join_source_type,
+            source_invite_code=payload.get("source_invite_code", undefined.UNDEFINED),
+            inviter_id=_deserialize_optional_snowflake(payload, "inviter_id"),
+            integration_type=payload.get("integration_type", undefined.UNDEFINED),
+            join_source_application_id=_deserialize_optional_snowflake(payload, "join_source_application_id"),
+            join_source_channel_id=_deserialize_optional_snowflake(payload, "join_source_channel_id"),
+        )
+
+    @typing_extensions.override
+    def deserialize_guild_member_search_result(
+        self, payload: data_binding.JSONObject
+    ) -> guild_models.GuildMemberSearchResult:
+        guild_id = snowflakes.Snowflake(payload["guild_id"])
+        members = [
+            self.deserialize_supplemental_guild_member(member_payload, guild_id=guild_id)
+            for member_payload in payload["members"]
+        ]
+
+        return guild_models.GuildMemberSearchResult(
+            guild_id=guild_id,
+            members=members,
+            page_result_count=payload["page_result_count"],
+            total_result_count=payload["total_result_count"],
+        )
+
+    @typing_extensions.override
+    def deserialize_guild_member_search_index_not_ready(
+        self, payload: data_binding.JSONObject
+    ) -> guild_models.GuildMemberSearchIndexNotReady:
+        return guild_models.GuildMemberSearchIndexNotReady(
+            message=payload["message"],
+            code=payload["code"],
+            documents_indexed=payload["documents_indexed"],
+            retry_after=float(payload["retry_after"]),
         )
 
     @typing_extensions.override
