@@ -219,6 +219,21 @@ def primary_guild_payload() -> dict[str, typing.Any]:
 
 
 @pytest.fixture
+def nameplate_payload() -> dict[str, typing.Any]:
+    return {
+        "sku_id": "2247558840304243311",
+        "asset": "nameplates/nameplates/twilight/",
+        "label": "COLLECTIBLES_NAMEPLATES_TWILIGHT_A11Y",
+        "palette": "cobalt",
+    }
+
+
+@pytest.fixture
+def collectibles_payload(nameplate_payload: dict[str, typing.Any]) -> dict[str, typing.Any]:
+    return {"nameplate": nameplate_payload}
+
+
+@pytest.fixture
 def user_payload(primary_guild_payload: dict[str, typing.Any]):
     return {
         "id": "115590097100865541",
@@ -3405,11 +3420,14 @@ class TestEntityFactoryImpl:
         assert len(onboarding.prompts) == 1
         assert isinstance(onboarding.prompts[0], guild_models.GuildOnboardingPrompt)
 
-    def test_deserialize_member(self, entity_factory_impl, mock_app, member_payload, user_payload):
-        member_payload = {**member_payload, "guild_id": "76543325"}
+    def test_deserialize_member(
+        self, entity_factory_impl, mock_app, member_payload, user_payload, collectibles_payload
+    ):
+        member_payload = {**member_payload, "guild_id": "76543325", "collectibles": collectibles_payload}
         member = entity_factory_impl.deserialize_member(member_payload)
         assert member.app is mock_app
         assert member.guild_id == 76543325
+        assert member.guild_collectibles == entity_factory_impl._deserialize_collectibles(collectibles_payload)
         assert member.guild_avatar_hash == "estrogen"
         assert member.user == entity_factory_impl.deserialize_user(user_payload)
         assert member.nickname == "foobarbaz"
@@ -3464,6 +3482,7 @@ class TestEntityFactoryImpl:
         assert member.nickname is None
         assert member.premium_since is None
         assert member.guild_avatar_hash is None
+        assert member.guild_collectibles is None
         assert member.joined_at is None
         assert isinstance(member, guild_models.Member)
 
@@ -3479,6 +3498,7 @@ class TestEntityFactoryImpl:
         assert member.nickname is None
         assert member.premium_since is None
         assert member.guild_avatar_hash is None
+        assert member.guild_collectibles is None
         assert member.is_deaf is undefined.UNDEFINED
         assert member.is_mute is undefined.UNDEFINED
         assert member.is_pending is undefined.UNDEFINED
@@ -4530,11 +4550,15 @@ class TestEntityFactoryImpl:
             "roles": ["582345963851743243", "582689893965365248", "734164204679856290", "757331666388910181"],
         }
 
-    def test__deserialize_interaction_member(self, entity_factory_impl, interaction_member_payload, user_payload):
+    def test__deserialize_interaction_member(
+        self, entity_factory_impl, interaction_member_payload, user_payload, collectibles_payload
+    ):
+        interaction_member_payload = {**interaction_member_payload, "collectibles": collectibles_payload}
         member = entity_factory_impl._deserialize_interaction_member(interaction_member_payload, guild_id=43123123)
         assert member.id == 115590097100865541
         assert member.joined_at == datetime.datetime(2020, 9, 27, 22, 58, 10, 282000, tzinfo=datetime.timezone.utc)
         assert member.nickname == "Snab"
+        assert member.guild_collectibles == entity_factory_impl._deserialize_collectibles(collectibles_payload)
         assert member.guild_avatar_hash == "oestrogen"
         assert member.guild_id == 43123123
         assert member.is_deaf is undefined.UNDEFINED
@@ -4583,6 +4607,7 @@ class TestEntityFactoryImpl:
         member = entity_factory_impl._deserialize_interaction_member(interaction_member_payload, guild_id=43123123)
 
         assert member.guild_avatar_hash is None
+        assert member.guild_collectibles is None
         assert member.premium_since is None
         assert member.raw_communication_disabled_until is None
 
@@ -7829,6 +7854,43 @@ class TestEntityFactoryImpl:
         decoration = entity_factory_impl._deserialize_avatar_decoration(None)
         assert decoration is None
 
+    def test_deserialize_nameplate(
+        self, entity_factory_impl, mock_app: mock.Mock, nameplate_payload: dict[str, typing.Any]
+    ):
+        nameplate = entity_factory_impl._deserialize_nameplate(nameplate_payload)
+        assert nameplate.sku_id == 2247558840304243311
+        assert nameplate.asset_path == "nameplates/nameplates/twilight/"
+        assert nameplate.label == "COLLECTIBLES_NAMEPLATES_TWILIGHT_A11Y"
+        assert nameplate.palette is user_models.NameplatePalette.COBALT
+
+    def test_deserialize_nameplate_with_unknown_palette(
+        self, entity_factory_impl, mock_app: mock.Mock, nameplate_payload: dict[str, typing.Any]
+    ):
+        nameplate = entity_factory_impl._deserialize_nameplate({**nameplate_payload, "palette": "unknown"})
+        assert nameplate.palette == "unknown"
+
+    def test_deserialize_nameplate_with_empty_payload(self, entity_factory_impl, mock_app: mock.Mock):
+        nameplate = entity_factory_impl._deserialize_nameplate(None)
+        assert nameplate is None
+
+    def test_deserialize_collectibles(
+        self,
+        entity_factory_impl,
+        mock_app: mock.Mock,
+        collectibles_payload: dict[str, typing.Any],
+        nameplate_payload: dict[str, typing.Any],
+    ):
+        collectibles = entity_factory_impl._deserialize_collectibles(collectibles_payload)
+        assert collectibles.nameplate == entity_factory_impl._deserialize_nameplate(nameplate_payload)
+
+    def test_deserialize_collectibles_with_no_nameplate(self, entity_factory_impl, mock_app: mock.Mock):
+        collectibles = entity_factory_impl._deserialize_collectibles({"nameplate": None})
+        assert collectibles.nameplate is None
+
+    def test_deserialize_collectibles_with_empty_payload(self, entity_factory_impl, mock_app: mock.Mock):
+        collectibles = entity_factory_impl._deserialize_collectibles(None)
+        assert collectibles is None
+
     def test__deserialize_primary_guild(
         self, entity_factory_impl, mock_app: mock.Mock, primary_guild_payload: dict[str, typing.Any]
     ):
@@ -7851,7 +7913,10 @@ class TestEntityFactoryImpl:
         assert primary_guild.tag is None
         assert primary_guild.badge_hash is None
 
-    def test_deserialize_user(self, entity_factory_impl, mock_app, user_payload, primary_guild_payload):
+    def test_deserialize_user(
+        self, entity_factory_impl, mock_app, user_payload, primary_guild_payload, collectibles_payload
+    ):
+        user_payload = {**user_payload, "collectibles": collectibles_payload}
         user = entity_factory_impl.deserialize_user(user_payload)
         assert user.app is mock_app
         assert user.id == 115590097100865541
@@ -7864,6 +7929,7 @@ class TestEntityFactoryImpl:
         assert user.is_system is True
         assert user.flags == user_models.UserFlag.EARLY_VERIFIED_DEVELOPER | user_models.UserFlag.ACTIVE_DEVELOPER
         assert isinstance(user, user_models.UserImpl)
+        assert user.collectibles == entity_factory_impl._deserialize_collectibles(collectibles_payload)
         assert user.primary_guild == entity_factory_impl._deserialize_primary_guild(primary_guild_payload)
 
     def test_deserialize_user_with_unset_fields(self, entity_factory_impl, mock_app, user_payload):
@@ -7880,6 +7946,7 @@ class TestEntityFactoryImpl:
         assert user.is_bot is False
         assert user.is_system is False
         assert user.flags == user_models.UserFlag.NONE
+        assert user.collectibles is None
         assert user.primary_guild is None
 
     @pytest.fixture
@@ -7904,7 +7971,10 @@ class TestEntityFactoryImpl:
             "primary_guild": primary_guild_payload,
         }
 
-    def test_deserialize_my_user(self, entity_factory_impl, mock_app, my_user_payload, primary_guild_payload):
+    def test_deserialize_my_user(
+        self, entity_factory_impl, mock_app, my_user_payload, primary_guild_payload, collectibles_payload
+    ):
+        my_user_payload = {**my_user_payload, "collectibles": collectibles_payload}
         my_user = entity_factory_impl.deserialize_my_user(my_user_payload)
         assert my_user.app is mock_app
         assert my_user.id == 379953393319542784
@@ -7923,6 +7993,7 @@ class TestEntityFactoryImpl:
         assert my_user.email == "blahblah@blah.blah"
         assert my_user.flags == user_models.UserFlag.PARTNERED_SERVER_OWNER | user_models.UserFlag.DISCORD_EMPLOYEE
         assert my_user.premium_type is user_models.PremiumType.NITRO_CLASSIC
+        assert my_user.collectibles == entity_factory_impl._deserialize_collectibles(collectibles_payload)
         assert my_user.primary_guild == entity_factory_impl._deserialize_primary_guild(primary_guild_payload)
         assert isinstance(my_user, user_models.OwnUser)
 
@@ -7948,6 +8019,7 @@ class TestEntityFactoryImpl:
         assert my_user.is_verified is None
         assert my_user.email is None
         assert my_user.locale is None
+        assert my_user.collectibles is None
         assert isinstance(my_user, user_models.OwnUser)
 
     ################

@@ -235,6 +235,7 @@ class _UserFields:
     username: str = attrs.field()
     global_name: str | None = attrs.field()
     avatar_decoration: user_models.AvatarDecoration | None = attrs.field()
+    collectibles: user_models.Collectibles | None = attrs.field()
     primary_guild: user_models.PrimaryGuild | None = attrs.field()
     avatar_hash: str = attrs.field()
     banner_hash: str | None = attrs.field()
@@ -2105,6 +2106,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             communication_disabled_until = time.iso8601_datetime_string_to_datetime(raw_communication_disabled_until)
 
         avatar_decoration = self._deserialize_avatar_decoration(payload.get("avatar_decoration_data"))
+        collectibles = self._deserialize_collectibles(payload.get("collectibles"))
 
         return guild_models.Member(
             user=user,
@@ -2113,6 +2115,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             joined_at=joined_at,
             nickname=payload.get("nick"),
             guild_avatar_decoration=avatar_decoration,
+            guild_collectibles=collectibles,
             guild_avatar_hash=payload.get("avatar"),
             guild_banner_hash=payload.get("banner"),
             premium_since=premium_since,
@@ -2789,6 +2792,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
         guild_flags = guild_models.GuildMemberFlags(payload.get("flags") or guild_models.GuildMemberFlags.NONE)
 
         avatar_decoration = self._deserialize_avatar_decoration(payload.get("avatar_decoration_data"))
+        collectibles = self._deserialize_collectibles(payload.get("collectibles"))
 
         # TODO: deduplicate member unmarshalling logic
         return base_interactions.InteractionMember(
@@ -2798,6 +2802,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             joined_at=time.iso8601_datetime_string_to_datetime(payload["joined_at"]),
             premium_since=premium_since,
             guild_avatar_decoration=avatar_decoration,
+            guild_collectibles=collectibles,
             guild_avatar_hash=payload.get("avatar"),
             guild_banner_hash=payload.get("banner"),
             nickname=payload.get("nick"),
@@ -4315,6 +4320,23 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             asset_hash=payload["asset"], sku_id=snowflakes.Snowflake(payload["sku_id"]), expires_at=expires_at
         )
 
+    def _deserialize_nameplate(self, payload: data_binding.JSONObject | None) -> user_models.Nameplate | None:
+        if not payload:
+            return None
+
+        return user_models.Nameplate(
+            sku_id=snowflakes.Snowflake(payload["sku_id"]),
+            asset_path=payload["asset"],
+            label=payload["label"],
+            palette=user_models.NameplatePalette(payload["palette"]),
+        )
+
+    def _deserialize_collectibles(self, payload: data_binding.JSONObject | None) -> user_models.Collectibles | None:
+        if not payload:
+            return None
+
+        return user_models.Collectibles(nameplate=self._deserialize_nameplate(payload.get("nameplate")))
+
     def _deserialize_primary_guild(self, payload: data_binding.JSONObject | None) -> user_models.PrimaryGuild | None:
         if not payload:
             return None
@@ -4333,6 +4355,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
     def _set_user_attributes(self, payload: data_binding.JSONObject) -> _UserFields:
         accent_color = payload.get("accent_color")
         avatar_decoration = self._deserialize_avatar_decoration(payload.get("avatar_decoration_data"))
+        collectibles = self._deserialize_collectibles(payload.get("collectibles"))
         primary_guild = self._deserialize_primary_guild(payload.get("primary_guild"))
         return _UserFields(
             id=snowflakes.Snowflake(payload["id"]),
@@ -4340,6 +4363,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             username=payload["username"],
             global_name=payload.get("global_name"),
             avatar_decoration=avatar_decoration,
+            collectibles=collectibles,
             primary_guild=primary_guild,
             avatar_hash=payload["avatar"],
             banner_hash=payload.get("banner", None),
@@ -4361,6 +4385,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             username=user_fields.username,
             global_name=payload.get("global_name"),
             avatar_decoration=user_fields.avatar_decoration,
+            collectibles=user_fields.collectibles,
             primary_guild=user_fields.primary_guild,
             avatar_hash=user_fields.avatar_hash,
             banner_hash=user_fields.banner_hash,
@@ -4380,6 +4405,7 @@ class EntityFactoryImpl(entity_factory.EntityFactory):
             username=user_fields.username,
             global_name=payload.get("global_name"),
             avatar_decoration=user_fields.avatar_decoration,
+            collectibles=user_fields.collectibles,
             primary_guild=user_fields.primary_guild,
             avatar_hash=user_fields.avatar_hash,
             banner_hash=user_fields.banner_hash,

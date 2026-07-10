@@ -22,13 +22,25 @@
 
 from __future__ import annotations
 
-__all__: typing.Sequence[str] = ("OwnUser", "PartialUser", "PremiumType", "PrimaryGuild", "User", "UserFlag")
+__all__: typing.Sequence[str] = (
+    "Collectibles",
+    "Nameplate",
+    "NameplatePalette",
+    "OwnUser",
+    "PartialUser",
+    "PremiumType",
+    "PrimaryGuild",
+    "User",
+    "UserFlag",
+)
 
 import abc
 import typing
+import urllib.parse
 
 import attrs
 
+from hikari import files
 from hikari import snowflakes
 from hikari import traits
 from hikari import undefined
@@ -49,11 +61,20 @@ if typing.TYPE_CHECKING:
     from hikari import channels
     from hikari import colors
     from hikari import embeds as embeds_
-    from hikari import files
     from hikari import guilds
     from hikari import locales
     from hikari import messages
     from hikari.api import special_endpoints
+
+
+_NAMEPLATE_FORMAT_PATHS: typing.Final[dict[str, str]] = {
+    "WEBM": "asset.webm",
+    "WEBP": "img.png?format=webp",
+    "JPG": "img.png?format=jpeg",
+    "JPEG": "img.png?format=jpeg",
+    "PNG": "static.png",
+    "APNG": "img.png",
+}
 
 
 @typing.final
@@ -139,6 +160,111 @@ class PremiumType(int, enums.Enum):
 
     NITRO_BASIC = 3
     """Premium tier including basic perks (e.g. animated emojis and avatars)."""
+
+
+@typing.final
+class NameplatePalette(str, enums.Enum):
+    """The background colors that Discord supports for nameplates."""
+
+    CRIMSON = "crimson"
+    """Crimson."""
+
+    BERRY = "berry"
+    """Berry."""
+
+    SKY = "sky"
+    """Sky."""
+
+    TEAL = "teal"
+    """Teal."""
+
+    FOREST = "forest"
+    """Forest."""
+
+    BUBBLE_GUM = "bubble_gum"
+    """Bubble gum."""
+
+    VIOLET = "violet"
+    """Violet."""
+
+    COBALT = "cobalt"
+    """Cobalt."""
+
+    CLOVER = "clover"
+    """Clover."""
+
+    LEMON = "lemon"
+    """Lemon."""
+
+    WHITE = "white"
+    """White."""
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class Nameplate:
+    """Data for a user's nameplate."""
+
+    sku_id: snowflakes.Snowflake = attrs.field(repr=True)
+    """The ID of the nameplate's SKU."""
+
+    asset_path: str = attrs.field(repr=True)
+    """The nameplate asset path."""
+
+    label: str = attrs.field(repr=True)
+    """The nameplate's label."""
+
+    palette: NameplatePalette | str = attrs.field(repr=True)
+    """The nameplate's background color."""
+
+    def make_url(
+        self,
+        *,
+        file_format: undefined.UndefinedOr[
+            typing.Literal["WEBM", "PNG", "JPEG", "JPG", "WEBP", "APNG"]
+        ] = undefined.UNDEFINED,
+    ) -> files.URL:
+        """Generate the asset URL for this nameplate.
+
+        Parameters
+        ----------
+        file_format
+            The format to use for this URL.
+
+            Supports `WEBM`, `PNG`, `JPEG`, `JPG`, `WEBP`, and `APNG`.
+
+            If not specified, the format will be `WEBM`.
+
+        Returns
+        -------
+        hikari.files.URL
+            The URL to the nameplate asset.
+
+        Raises
+        ------
+        TypeError
+            If an invalid format is passed for `file_format`.
+        """
+        requested_format = "WEBM" if not file_format else file_format.upper()
+
+        try:
+            path = _NAMEPLATE_FORMAT_PATHS[requested_format]
+        except KeyError:
+            msg = (
+                f"{requested_format} is not a valid format for this asset. Valid formats are: "
+                + ", ".join(_NAMEPLATE_FORMAT_PATHS)
+            )
+            raise TypeError(msg) from None
+
+        asset_path = urllib.parse.quote(self.asset_path.strip("/"), safe="/")
+        return files.URL(f"{urls.COLLECTIBLES_ASSET_BASE_URL}/{asset_path}/{path}")
+
+
+@attrs.define(kw_only=True, weakref_slot=False)
+class Collectibles:
+    """Data for a user's collectibles."""
+
+    nameplate: Nameplate | None = attrs.field(repr=True)
+    """The user's nameplate, if they have one."""
 
 
 @attrs.define(kw_only=True, weakref_slot=False)
@@ -298,6 +424,11 @@ class PartialUser(snowflakes.Unique, abc.ABC):
     @abc.abstractmethod
     def avatar_decoration(self) -> undefined.UndefinedNoneOr[AvatarDecoration]:
         """Avatar decoration for the user, if they have one, otherwise [`None`][]."""
+
+    @property
+    @abc.abstractmethod
+    def collectibles(self) -> undefined.UndefinedNoneOr[Collectibles]:
+        """Collectibles for the user, if they have any, otherwise [`None`][]."""
 
     @property
     @abc.abstractmethod
@@ -644,6 +775,12 @@ class User(PartialUser, abc.ABC):
     @property
     @abc.abstractmethod
     @typing_extensions.override
+    def collectibles(self) -> Collectibles | None:
+        """Collectibles for the user, if they have any, otherwise [`None`][]."""
+
+    @property
+    @abc.abstractmethod
+    @typing_extensions.override
     def avatar_hash(self) -> str | None:
         """Avatar hash for the user, if they have one, otherwise [`None`][]."""
 
@@ -888,6 +1025,9 @@ class PartialUserImpl(PartialUser):
     avatar_decoration: undefined.UndefinedNoneOr[AvatarDecoration] = attrs.field(eq=False, hash=False, repr=False)
     """Avatar decoration of the user, if an avatar decoration is set."""
 
+    collectibles: undefined.UndefinedNoneOr[Collectibles] = attrs.field(eq=False, hash=False, repr=False)
+    """Collectibles of the user, if any are set."""
+
     avatar_hash: undefined.UndefinedNoneOr[str] = attrs.field(eq=False, hash=False, repr=False)
     """Avatar hash of the user, if a custom avatar is set."""
 
@@ -956,6 +1096,9 @@ class UserImpl(PartialUserImpl, User):
 
     avatar_decoration: AvatarDecoration | None = attrs.field(eq=False, hash=False, repr=False)
     """Avatar decoration of the user, if they have one."""
+
+    collectibles: Collectibles | None = attrs.field(eq=False, hash=False, repr=False)
+    """Collectibles of the user, if any are set."""
 
     avatar_hash: str | None = attrs.field(eq=False, hash=False, repr=False)
     """The user's avatar hash, if they have one, otherwise [`None`][]."""
