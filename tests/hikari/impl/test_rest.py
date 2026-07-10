@@ -5461,6 +5461,113 @@ class TestRESTClientImplAsync:
         rest_client._entity_factory.deserialize_member.assert_called_once_with({"id": "764435"}, guild_id=645234123)
         rest_client._request.assert_awaited_once_with(expected_route, query=expected_query)
 
+    async def test_search_guild_members_with_defaults(self, rest_client):
+        expected_route = routes.POST_GUILD_MEMBERS_SEARCH.compile(guild=645234123)
+        expected_json = {"limit": 25, "sort": 1}
+        rest_client._request = mock.AsyncMock(return_value={"guild_id": "645234123"})
+
+        result = await rest_client.search_guild_members(StubModel(645234123))
+
+        assert result is rest_client._entity_factory.deserialize_guild_member_search_result.return_value
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json)
+        rest_client._entity_factory.deserialize_guild_member_search_result.assert_called_once_with(
+            {"guild_id": "645234123"}
+        )
+
+    async def test_search_guild_members(self, rest_client):
+        expected_route = routes.POST_GUILD_MEMBERS_SEARCH.compile(guild=645234123)
+        expected_json = {
+            "limit": 50,
+            "sort": 4,
+            "or_query": {
+                "user_id": {"or_query": ["123"], "range": {"gte": "111", "lte": "222"}},
+                "usernames": {"or_query": ["nyaa"]},
+                "role_ids": {"and_query": ["333", "444"]},
+                "guild_joined_at": {"range": {"gte": 1_700_000_000_000}},
+                "safety_signals": {
+                    "unusual_dm_activity_until": {"range": {"lte": 1_800_000_000_000}},
+                    "communication_disabled_until": {"range": {"gte": 1_600_000_000_000}},
+                    "unusual_account_activity": True,
+                    "automod_quarantined_username": False,
+                },
+                "is_pending": True,
+                "did_rejoin": False,
+                "join_source_type": {"or_query": [5]},
+                "source_invite_code": {"or_query": ["abc123"]},
+            },
+            "and_query": {"role_ids": {"and_query": ["555", "666"]}, "is_pending": False},
+            "before": {"user_id": "777", "guild_joined_at": 1_700_000_000_001},
+            "after": {"user_id": "888", "guild_joined_at": 1_700_000_000_002},
+        }
+        rest_client._request = mock.AsyncMock(return_value={"guild_id": "645234123", "members": []})
+        or_query = guilds.MemberSearchFilter(
+            user_id=guilds.MemberSearchQuery(
+                or_query=[StubModel(123)], range=guilds.MemberSearchRangeQuery(gte=StubModel(111), lte=StubModel(222))
+            ),
+            usernames=guilds.MemberSearchQuery(or_query=["nyaa"]),
+            role_ids=guilds.MemberSearchQuery(and_query=[StubModel(333), StubModel(444)]),
+            guild_joined_at=guilds.MemberSearchQuery(range=guilds.MemberSearchRangeQuery(gte=1_700_000_000_000)),
+            safety_signals=guilds.MemberSearchSafetySignals(
+                unusual_dm_activity_until=guilds.MemberSearchQuery(
+                    range=guilds.MemberSearchRangeQuery(lte=1_800_000_000_000)
+                ),
+                communication_disabled_until=guilds.MemberSearchQuery(
+                    range=guilds.MemberSearchRangeQuery(gte=1_600_000_000_000)
+                ),
+                unusual_account_activity=True,
+                automod_quarantined_username=False,
+            ),
+            is_pending=True,
+            did_rejoin=False,
+            join_source_type=guilds.MemberSearchQuery(or_query=[guilds.GuildMemberJoinSourceType.INVITE]),
+            source_invite_code=guilds.MemberSearchQuery(or_query=["abc123"]),
+        )
+        and_query = guilds.MemberSearchFilter(
+            role_ids=guilds.MemberSearchQuery(and_query=[StubModel(555), StubModel(666)]), is_pending=False
+        )
+
+        result = await rest_client.search_guild_members(
+            StubModel(645234123),
+            limit=50,
+            sort=guilds.MemberSearchSortType.USER_ID_ASC,
+            or_query=or_query,
+            and_query=and_query,
+            before=guilds.MemberSearchPaginationFilter(user_id=StubModel(777), guild_joined_at=1_700_000_000_001),
+            after=guilds.MemberSearchPaginationFilter(user_id=StubModel(888), guild_joined_at=1_700_000_000_002),
+        )
+
+        assert result is rest_client._entity_factory.deserialize_guild_member_search_result.return_value
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json)
+        rest_client._entity_factory.deserialize_guild_member_search_result.assert_called_once_with(
+            {"guild_id": "645234123", "members": []}
+        )
+
+    async def test_search_guild_members_when_index_not_ready(self, rest_client):
+        response = {
+            "message": "Index not yet available. Try again later",
+            "code": 110000,
+            "documents_indexed": 0,
+            "retry_after": 15,
+        }
+        expected_route = routes.POST_GUILD_MEMBERS_SEARCH.compile(guild=645234123)
+        rest_client._request = mock.AsyncMock(return_value=response)
+
+        result = await rest_client.search_guild_members(StubModel(645234123))
+
+        assert result is rest_client._entity_factory.deserialize_guild_member_search_index_not_ready.return_value
+        rest_client._request.assert_awaited_once_with(expected_route, json={"limit": 25, "sort": 1})
+        rest_client._entity_factory.deserialize_guild_member_search_index_not_ready.assert_called_once_with(response)
+        rest_client._entity_factory.deserialize_guild_member_search_result.assert_not_called()
+
+    @pytest.mark.parametrize("limit", [0, 1001])
+    async def test_search_guild_members_when_limit_out_of_bounds(self, rest_client, limit):
+        rest_client._request = mock.AsyncMock()
+
+        with pytest.raises(ValueError, match="limit must be between 1 and 1000"):
+            await rest_client.search_guild_members(StubModel(645234123), limit=limit)
+
+        rest_client._request.assert_not_called()
+
     async def test_edit_member(self, rest_client):
         expected_route = routes.PATCH_GUILD_MEMBER.compile(guild=123, user=456)
         expected_json = {

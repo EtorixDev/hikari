@@ -121,6 +121,89 @@ _RETRY_ERROR_CODES: typing.Final[frozenset[int]] = frozenset((500, 502, 503, 504
 _MAX_BACKOFF_DURATION: typing.Final[int] = 16
 
 
+def _serialize_member_search_snowflake(value: snowflakes.SnowflakeishOr[snowflakes.Unique]) -> str:
+    return str(int(value))
+
+
+def _build_member_search_range_query(
+    range_query: guilds.MemberSearchRangeQuery, conversion: typing.Callable[[typing.Any], data_binding.JSONish]
+) -> data_binding.JSONObjectBuilder:
+    body = data_binding.JSONObjectBuilder()
+    body.put("gte", range_query.gte, conversion=conversion)
+    body.put("lte", range_query.lte, conversion=conversion)
+    return body
+
+
+def _build_member_search_query(
+    query: guilds.MemberSearchQuery, conversion: typing.Callable[[typing.Any], data_binding.JSONish]
+) -> data_binding.JSONObjectBuilder:
+    body = data_binding.JSONObjectBuilder()
+    body.put_array("or_query", query.or_query, conversion=conversion)
+    body.put_array("and_query", query.and_query, conversion=conversion)
+    body.put("range", query.range, conversion=lambda value: _build_member_search_range_query(value, conversion))
+    return body
+
+
+def _build_member_search_safety_signals(signals: guilds.MemberSearchSafetySignals) -> data_binding.JSONObjectBuilder:
+    body = data_binding.JSONObjectBuilder()
+    body.put(
+        "unusual_dm_activity_until",
+        signals.unusual_dm_activity_until,
+        conversion=lambda value: _build_member_search_query(value, int),
+    )
+    body.put(
+        "communication_disabled_until",
+        signals.communication_disabled_until,
+        conversion=lambda value: _build_member_search_query(value, int),
+    )
+    body.put("unusual_account_activity", signals.unusual_account_activity)
+    body.put("automod_quarantined_username", signals.automod_quarantined_username)
+    return body
+
+
+def _build_member_search_filter(member_filter: guilds.MemberSearchFilter) -> data_binding.JSONObjectBuilder:
+    body = data_binding.JSONObjectBuilder()
+    body.put(
+        "user_id",
+        member_filter.user_id,
+        conversion=lambda value: _build_member_search_query(value, _serialize_member_search_snowflake),
+    )
+    body.put("usernames", member_filter.usernames, conversion=lambda value: _build_member_search_query(value, str))
+    body.put(
+        "role_ids",
+        member_filter.role_ids,
+        conversion=lambda value: _build_member_search_query(value, _serialize_member_search_snowflake),
+    )
+    body.put(
+        "guild_joined_at",
+        member_filter.guild_joined_at,
+        conversion=lambda value: _build_member_search_query(value, int),
+    )
+    body.put("safety_signals", member_filter.safety_signals, conversion=_build_member_search_safety_signals)
+    body.put("is_pending", member_filter.is_pending)
+    body.put("did_rejoin", member_filter.did_rejoin)
+    body.put(
+        "join_source_type",
+        member_filter.join_source_type,
+        conversion=lambda value: _build_member_search_query(value, int),
+    )
+    body.put(
+        "source_invite_code",
+        member_filter.source_invite_code,
+        conversion=lambda value: _build_member_search_query(value, str),
+    )
+    return body
+
+
+def _build_member_search_pagination_filter(
+    pagination_filter: guilds.MemberSearchPaginationFilter,
+) -> data_binding.JSONObjectBuilder:
+    body = data_binding.JSONObjectBuilder()
+    body.put_snowflake("user_id", pagination_filter.user_id)
+    body.put("guild_joined_at", pagination_filter.guild_joined_at)
+    return body
+
+
 class ClientCredentialsStrategy(rest_api.TokenStrategy):
     """Strategy class for handling client credential OAuth2 authorization.
 
@@ -3629,6 +3712,38 @@ class RESTClientImpl(rest_api.RESTClient):
         return [
             self._entity_factory.deserialize_member(member_payload, guild_id=guild_id) for member_payload in response
         ]
+
+    @typing_extensions.override
+    async def search_guild_members(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        *,
+        limit: int = 25,
+        sort: guilds.MemberSearchSortType | int = guilds.MemberSearchSortType.JOINED_AT_DESC,
+        or_query: undefined.UndefinedOr[guilds.MemberSearchFilter] = undefined.UNDEFINED,
+        and_query: undefined.UndefinedOr[guilds.MemberSearchFilter] = undefined.UNDEFINED,
+        before: undefined.UndefinedOr[guilds.MemberSearchPaginationFilter] = undefined.UNDEFINED,
+        after: undefined.UndefinedOr[guilds.MemberSearchPaginationFilter] = undefined.UNDEFINED,
+    ) -> guilds.GuildMemberSearchResult | guilds.GuildMemberSearchIndexNotReady:
+        if not 1 <= limit <= 1000:
+            msg = "limit must be between 1 and 1000"
+            raise ValueError(msg)
+
+        route = routes.POST_GUILD_MEMBERS_SEARCH.compile(guild=guild)
+        body = data_binding.JSONObjectBuilder()
+        body.put("limit", limit)
+        body.put("sort", sort, conversion=int)
+        body.put("or_query", or_query, conversion=_build_member_search_filter)
+        body.put("and_query", and_query, conversion=_build_member_search_filter)
+        body.put("before", before, conversion=_build_member_search_pagination_filter)
+        body.put("after", after, conversion=_build_member_search_pagination_filter)
+
+        response = await self._request(route, json=body)
+        assert isinstance(response, dict)
+        if response.get("code") == 110000:
+            return self._entity_factory.deserialize_guild_member_search_index_not_ready(response)
+
+        return self._entity_factory.deserialize_guild_member_search_result(response)
 
     @typing_extensions.override
     async def edit_member(

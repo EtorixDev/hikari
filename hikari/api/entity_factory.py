@@ -1138,6 +1138,69 @@ class EntityFactory(abc.ABC):
         """
 
     @abc.abstractmethod
+    def deserialize_supplemental_guild_member(
+        self,
+        payload: data_binding.JSONObject,
+        *,
+        guild_id: undefined.UndefinedOr[snowflakes.Snowflake] = undefined.UNDEFINED,
+    ) -> guild_models.SupplementalGuildMember:
+        """Parse a raw payload from Discord into a supplemental guild member object.
+
+        Parameters
+        ----------
+        payload
+            The JSON payload to deserialize.
+        guild_id
+            The ID of the guild this supplemental member belongs to. If this is specified
+            then this will be prioritised over any guild context in the payload.
+
+        Returns
+        -------
+        hikari.guilds.SupplementalGuildMember
+            The deserialized supplemental guild member object.
+
+        Raises
+        ------
+        KeyError
+            If `guild_id` is left as [`hikari.undefined.UNDEFINED`][] when the guild
+            cannot be inferred from the payload.
+        """
+
+    @abc.abstractmethod
+    def deserialize_guild_member_search_result(
+        self, payload: data_binding.JSONObject
+    ) -> guild_models.GuildMemberSearchResult:
+        """Parse a raw payload from Discord into a guild member search result object.
+
+        Parameters
+        ----------
+        payload
+            The JSON payload to deserialize.
+
+        Returns
+        -------
+        hikari.guilds.GuildMemberSearchResult
+            The deserialized guild member search result object.
+        """
+
+    @abc.abstractmethod
+    def deserialize_guild_member_search_index_not_ready(
+        self, payload: data_binding.JSONObject
+    ) -> guild_models.GuildMemberSearchIndexNotReady:
+        """Parse a raw accepted response from Discord into a guild member search index status object.
+
+        Parameters
+        ----------
+        payload
+            The JSON payload to deserialize.
+
+        Returns
+        -------
+        hikari.guilds.GuildMemberSearchIndexNotReady
+            The deserialized guild member search index status object.
+        """
+
+    @abc.abstractmethod
     def deserialize_role(
         self, payload: data_binding.JSONObject, *, guild_id: snowflakes.Snowflake
     ) -> guild_models.Role:

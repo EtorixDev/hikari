@@ -5913,6 +5913,69 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         """
 
     @abc.abstractmethod
+    async def search_guild_members(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        *,
+        limit: int = 25,
+        sort: guilds.MemberSearchSortType | int = 1,
+        or_query: undefined.UndefinedOr[guilds.MemberSearchFilter] = undefined.UNDEFINED,
+        and_query: undefined.UndefinedOr[guilds.MemberSearchFilter] = undefined.UNDEFINED,
+        before: undefined.UndefinedOr[guilds.MemberSearchPaginationFilter] = undefined.UNDEFINED,
+        after: undefined.UndefinedOr[guilds.MemberSearchPaginationFilter] = undefined.UNDEFINED,
+    ) -> guilds.GuildMemberSearchResult | guilds.GuildMemberSearchIndexNotReady:
+        """Search members in a guild using Discord's advanced member search endpoint.
+
+        !!! warning
+            This endpoint requires the [`hikari.permissions.Permissions.MANAGE_GUILD`][] permission.
+            For applications, this endpoint is also restricted according to whether the
+            [hikari.intents.Intents.GUILD_MEMBERS][] intent is enabled for the application.
+
+        !!! note
+            If Discord has not prepared the guild's member search index yet, it may return
+            an accepted response with retry metadata. In this case, this method returns
+            [`hikari.guilds.GuildMemberSearchIndexNotReady`][].
+
+        Parameters
+        ----------
+        guild
+            The object or ID of the guild to search members in.
+        limit
+            The maximum number of members to return. This must be between 1 and 1,000.
+        sort
+            The sorting strategy to use.
+        or_query
+            Filter criteria to match against members using OR logic.
+        and_query
+            Filter criteria to match against members using AND logic.
+        before
+            Get members before this member.
+        after
+            Get members after this member.
+
+        Returns
+        -------
+        hikari.guilds.GuildMemberSearchResult | hikari.guilds.GuildMemberSearchIndexNotReady
+            The search results, or retry metadata if the search index is not ready.
+
+        Raises
+        ------
+        ValueError
+            If `limit` is not between 1 and 1,000.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing the required permission.
+        hikari.errors.NotFoundError
+            If the guild is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
     async def edit_member(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
