@@ -852,12 +852,7 @@ class Member(users.User):
             [`None`][] if the cache is missing the roles information or
             the highest role the user has.
         """
-        roles = sorted(self.get_roles(), key=lambda r: r.position, reverse=True)
-
-        try:
-            return next(iter(roles))
-        except StopIteration:
-            return None
+        return max(self.get_roles(), key=lambda role: (role.position, -role.id), default=None)
 
     @property
     @typing_extensions.override
