@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 __all__: typing.Sequence[str] = (
+    "BulkBanResult",
     "GatewayGuild",
     "Guild",
     "GuildBan",
@@ -1615,6 +1616,18 @@ class GuildOnboardingPrompt(snowflakes.Unique):
 
 @attrs_extensions.with_copy
 @attrs.define(kw_only=True, weakref_slot=False)
+class BulkBanResult:
+    """Represents the result of a bulk guild ban."""
+
+    banned_user_ids: typing.Sequence[snowflakes.Snowflake] = attrs.field(repr=True)
+    """The IDs of the users that were successfully banned."""
+
+    failed_user_ids: typing.Sequence[snowflakes.Snowflake] = attrs.field(repr=True)
+    """The IDs of the users that could not be banned or were already banned."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
 class GuildBan:
     """Used to represent guild bans."""
 
@@ -1752,6 +1765,53 @@ class PartialGuild(snowflakes.Unique):
             If an internal error occurs on Discord while handling the request.
         """
         await self.app.rest.ban_user(self.id, user, delete_message_seconds=delete_message_seconds, reason=reason)
+
+    async def bulk_ban(
+        self,
+        users: snowflakes.SnowflakeishSequence[users.PartialUser],
+        *,
+        delete_message_seconds: undefined.UndefinedOr[time.Intervalish] = undefined.UNDEFINED,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> BulkBanResult:
+        """Ban up to 200 users from this guild.
+
+        Parameters
+        ----------
+        users
+            The users to ban from the guild. This must contain between 1 and 200 users.
+        delete_message_seconds
+            If provided, the number of seconds to delete messages for.
+            This can be represented as either an int/float between 0 and 604800 (7 days), or
+            a [`datetime.timedelta`][] object.
+        reason
+            If provided, the reason that will be recorded in the audit logs.
+            Maximum of 512 characters.
+
+        Returns
+        -------
+        hikari.guilds.BulkBanResult
+            The IDs of the users that were and were not banned.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value or none of the users could be banned.
+        hikari.errors.ForbiddenError
+            If you are missing either the [`hikari.permissions.Permissions.BAN_MEMBERS`][] or
+            [`hikari.permissions.Permissions.MANAGE_GUILD`][] permission.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the guild is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+        return await self.app.rest.bulk_ban_users(
+            self.id, users, delete_message_seconds=delete_message_seconds, reason=reason
+        )
 
     async def unban(
         self,

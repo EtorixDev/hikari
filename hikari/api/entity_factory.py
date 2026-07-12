@@ -1219,6 +1219,21 @@ class EntityFactory(abc.ABC):
         """
 
     @abc.abstractmethod
+    def deserialize_bulk_ban_result(self, payload: data_binding.JSONObject) -> guild_models.BulkBanResult:
+        """Parse a raw payload from Discord into a bulk ban result object.
+
+        Parameters
+        ----------
+        payload
+            The JSON payload to deserialize.
+
+        Returns
+        -------
+        hikari.guilds.BulkBanResult
+            The deserialized bulk ban result object.
+        """
+
+    @abc.abstractmethod
     def deserialize_guild_preview(self, payload: data_binding.JSONObject) -> guild_models.GuildPreview:
         """Parse a raw payload from Discord into a guild preview object.
 

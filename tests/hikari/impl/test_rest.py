@@ -5628,6 +5628,46 @@ class TestRESTClientImplAsync:
 
         rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason="because i can")
 
+    async def test_bulk_ban_users(self, rest_client):
+        expected_route = routes.POST_GUILD_BULK_BAN.compile(guild=123)
+        expected_json = {"user_ids": ["456", "789"], "delete_message_seconds": 604800}
+        payload = {"banned_users": ["456"], "failed_users": ["789"]}
+        result = StubModel(987)
+        rest_client._request = mock.AsyncMock(return_value=payload)
+        rest_client._entity_factory.deserialize_bulk_ban_result = mock.Mock(return_value=result)
+
+        assert (
+            await rest_client.bulk_ban_users(
+                StubModel(123), [StubModel(456), StubModel(789)], delete_message_seconds=604800, reason="raid"
+            )
+            is result
+        )
+
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason="raid")
+        rest_client._entity_factory.deserialize_bulk_ban_result.assert_called_once_with(payload)
+
+    async def test_bulk_ban_users_with_timedelta(self, rest_client):
+        expected_route = routes.POST_GUILD_BULK_BAN.compile(guild=123)
+        expected_json = {"user_ids": ["456"], "delete_message_seconds": 86400.0}
+        payload = {"banned_users": ["456"], "failed_users": []}
+        rest_client._request = mock.AsyncMock(return_value=payload)
+
+        await rest_client.bulk_ban_users(
+            StubModel(123), [StubModel(456)], delete_message_seconds=datetime.timedelta(days=1)
+        )
+
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason=undefined.UNDEFINED)
+
+    async def test_bulk_ban_users_without_optionals(self, rest_client):
+        expected_route = routes.POST_GUILD_BULK_BAN.compile(guild=123)
+        expected_json = {"user_ids": ["456"]}
+        payload = {"banned_users": ["456"], "failed_users": []}
+        rest_client._request = mock.AsyncMock(return_value=payload)
+
+        await rest_client.bulk_ban_users(StubModel(123), [StubModel(456)])
+
+        rest_client._request.assert_awaited_once_with(expected_route, json=expected_json, reason=undefined.UNDEFINED)
+
     async def test_unban_user(self, rest_client):
         expected_route = routes.DELETE_GUILD_BAN.compile(guild=123, user=456)
         rest_client._request = mock.AsyncMock()

@@ -729,6 +729,17 @@ class TestPartialGuild:
         model.app.rest.ban_user.assert_awaited_once_with(90210, 4321, delete_message_seconds=864000, reason="Go away!")
 
     @pytest.mark.asyncio
+    async def test_bulk_ban(self, model):
+        model.app.rest.bulk_ban_users = mock.AsyncMock()
+
+        result = await model.bulk_ban([4321, 5432], delete_message_seconds=864000, reason="Go away!")
+
+        assert result is model.app.rest.bulk_ban_users.return_value
+        model.app.rest.bulk_ban_users.assert_awaited_once_with(
+            90210, [4321, 5432], delete_message_seconds=864000, reason="Go away!"
+        )
+
+    @pytest.mark.asyncio
     async def test_unban(self, model):
         model.app.rest.unban_user = mock.AsyncMock()
         await model.unban(4321, reason="Comeback!!")
