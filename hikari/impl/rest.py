@@ -3898,6 +3898,26 @@ class RESTClientImpl(rest_api.RESTClient):
         return self.ban_user(guild, user, delete_message_seconds=delete_message_seconds, reason=reason)
 
     @typing_extensions.override
+    async def bulk_ban_users(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        users: snowflakes.SnowflakeishSequence[users.PartialUser],
+        *,
+        delete_message_seconds: undefined.UndefinedOr[time.Intervalish] = undefined.UNDEFINED,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> guilds.BulkBanResult:
+        if isinstance(delete_message_seconds, datetime.timedelta):
+            delete_message_seconds = delete_message_seconds.total_seconds()
+
+        body = data_binding.JSONObjectBuilder()
+        body.put_snowflake_array("user_ids", users)
+        body.put("delete_message_seconds", delete_message_seconds)
+        route = routes.POST_GUILD_BULK_BAN.compile(guild=guild)
+        response = await self._request(route, json=body, reason=reason)
+        assert isinstance(response, dict)
+        return self._entity_factory.deserialize_bulk_ban_result(response)
+
+    @typing_extensions.override
     async def unban_user(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],

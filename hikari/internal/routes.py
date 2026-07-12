@@ -409,6 +409,7 @@ PUT_GUILD_BAN: typing.Final[Route] = Route(PUT, "/guilds/{guild}/bans/{user}")
 DELETE_GUILD_BAN: typing.Final[Route] = Route(DELETE, "/guilds/{guild}/bans/{user}")
 
 GET_GUILD_BANS: typing.Final[Route] = Route(GET, "/guilds/{guild}/bans")
+POST_GUILD_BULK_BAN: typing.Final[Route] = Route(POST, "/guilds/{guild}/bulk-ban")
 
 GET_GUILD_CHANNELS: typing.Final[Route] = Route(GET, "/guilds/{guild}/channels")
 POST_GUILD_CHANNELS: typing.Final[Route] = Route(POST, "/guilds/{guild}/channels")

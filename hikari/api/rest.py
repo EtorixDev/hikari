@@ -6307,6 +6307,54 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         """Alias of [`hikari.api.rest.RESTClient.ban_user`][]."""
 
     @abc.abstractmethod
+    async def bulk_ban_users(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        users: snowflakes.SnowflakeishSequence[users.PartialUser],
+        *,
+        delete_message_seconds: undefined.UndefinedOr[time.Intervalish] = undefined.UNDEFINED,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> guilds.BulkBanResult:
+        """Ban up to 200 users from a guild.
+
+        Parameters
+        ----------
+        guild
+            The guild to ban the users from. This may be the object or the ID of an existing guild.
+        users
+            The users to ban from the guild. This must contain between 1 and 200 users.
+        delete_message_seconds
+            If provided, the number of seconds to delete messages for.
+            This can be represented as either an int/float between 0 and 604800 (7 days), or
+            a [`datetime.timedelta`][] object.
+        reason
+            If provided, the reason that will be recorded in the audit logs.
+            Maximum of 512 characters.
+
+        Returns
+        -------
+        hikari.guilds.BulkBanResult
+            The IDs of the users that were and were not banned.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value or none of the users could be banned.
+        hikari.errors.ForbiddenError
+            If you are missing either the [`hikari.permissions.Permissions.BAN_MEMBERS`][] or
+            [`hikari.permissions.Permissions.MANAGE_GUILD`][] permission.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the guild is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
     async def unban_user(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
