@@ -41,6 +41,7 @@ from hikari import voices
 from hikari.api import config as config_api
 from hikari.impl import cache as cache_impl_
 from hikari.impl import config
+from hikari.impl import entity_factory
 from hikari.internal import cache as cache_utilities
 from hikari.internal import collections
 from tests.hikari import hikari_test_helpers
@@ -2245,6 +2246,37 @@ class TestCacheImpl:
 
         assert result == {snowflakes.Snowflake(3214321): mock_member_1, snowflakes.Snowflake(53224): mock_member_2}
         cache_impl._build_member.assert_has_calls([mock.call(mock_member_data_1), mock.call(mock_member_data_2)])
+
+    def test_cached_user_and_guild_collectibles_are_immutable(self, cache_impl, app_impl):
+        nameplate_payload = {"sku_id": "123", "asset": "nameplates/twilight/", "label": "Twilight", "palette": "cobalt"}
+        member = entity_factory.EntityFactoryImpl(app_impl).deserialize_member(
+            {
+                "guild_id": "456",
+                "roles": [],
+                "joined_at": None,
+                "collectibles": {"nameplate": {**nameplate_payload, "label": "Guild Twilight"}},
+                "user": {
+                    "id": "789",
+                    "username": "twilight",
+                    "discriminator": "0",
+                    "avatar": None,
+                    "collectibles": {"nameplate": nameplate_payload},
+                },
+            }
+        )
+        cache_impl.set_member(member)
+
+        cached_user = cache_impl.get_user(member.id)
+        cached_member = cache_impl.get_member(member.guild_id, member.id)
+        for collectibles in (cached_user.collectibles, cached_member.guild_collectibles):
+            with pytest.raises(AttributeError):
+                collectibles.nameplate.label = "Changed"
+
+            with pytest.raises(AttributeError):
+                collectibles.nameplate = None
+
+        assert cache_impl.get_user(member.id).collectibles.nameplate.label == "Twilight"
+        assert cache_impl.get_member(member.guild_id, member.id).guild_collectibles.nameplate.label == "Guild Twilight"
 
     def test_set_member(self, cache_impl):
         mock_user = mock.Mock(users.User, id=snowflakes.Snowflake(645234123))

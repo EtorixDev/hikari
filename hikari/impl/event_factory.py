@@ -59,6 +59,7 @@ from hikari.internal import collections
 from hikari.internal import data_binding
 from hikari.internal import time
 from hikari.internal import typing_extensions
+from hikari.internal import user_payloads
 
 if typing.TYPE_CHECKING:
     import datetime
@@ -512,21 +513,7 @@ class EventFactoryImpl(event_factory.EventFactory):
 
             collectibles: undefined.UndefinedNoneOr[user_models.Collectibles] = undefined.UNDEFINED
             if (raw_collectibles := user_payload.get("collectibles", undefined.UNDEFINED)) is not undefined.UNDEFINED:
-                if raw_collectibles is None:
-                    collectibles = None
-                else:
-                    raw_nameplate = raw_collectibles.get("nameplate")
-                    nameplate = (
-                        user_models.Nameplate(
-                            sku_id=snowflakes.Snowflake(raw_nameplate["sku_id"]),
-                            asset_path=raw_nameplate["asset"],
-                            label=raw_nameplate["label"],
-                            palette=user_models.NameplatePalette(raw_nameplate["palette"]),
-                        )
-                        if raw_nameplate
-                        else None
-                    )
-                    collectibles = user_models.Collectibles(nameplate=nameplate)
+                collectibles = user_payloads.deserialize_collectibles(raw_collectibles)
 
             user = user_models.PartialUserImpl(
                 app=self._app,

@@ -30,6 +30,7 @@ from hikari import auto_mod
 from hikari import channels as channel_models
 from hikari import colors as color_models
 from hikari import emojis as emoji_models
+from hikari import snowflakes
 from hikari import traits
 from hikari import undefined
 from hikari import users as user_models
@@ -722,8 +723,44 @@ class TestEventFactoryImpl:
         assert event.user.is_bot is undefined.UNDEFINED
         assert event.user.is_system is undefined.UNDEFINED
         assert event.user.flags is undefined.UNDEFINED
+        assert event.user.collectibles is undefined.UNDEFINED
 
         assert event.presence is mock_app.entity_factory.deserialize_member_presence.return_value
+
+    @pytest.mark.parametrize(
+        ("collectibles", "expected"),
+        [
+            (None, None),
+            ({}, None),
+            ({"nameplate": None}, user_models.Collectibles(nameplate=None)),
+            (
+                {
+                    "nameplate": {
+                        "sku_id": "123",
+                        "asset": "nameplates/twilight/",
+                        "label": "Twilight",
+                        "palette": "cobalt",
+                    }
+                },
+                user_models.Collectibles(
+                    nameplate=user_models.Nameplate(
+                        sku_id=snowflakes.Snowflake(123),
+                        asset_path="nameplates/twilight/",
+                        label="Twilight",
+                        palette=user_models.NameplatePalette.COBALT,
+                    )
+                ),
+            ),
+        ],
+    )
+    def test_deserialize_presence_update_event_with_collectibles(
+        self, event_factory, mock_shard, collectibles, expected
+    ):
+        event = event_factory.deserialize_presence_update_event(
+            mock_shard, {"user": {"id": "1231312", "collectibles": collectibles}}
+        )
+
+        assert event.user.collectibles == expected
 
     def test_deserialize_audit_log_entry_create_event(
         self, event_factory: event_factory_.EventFactoryImpl, mock_app, mock_shard
