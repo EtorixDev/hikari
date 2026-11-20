@@ -5495,7 +5495,7 @@ class TestRESTClientImplAsync:
                 "join_source_type": {"or_query": [5]},
                 "source_invite_code": {"or_query": ["abc123"]},
             },
-            "and_query": {"role_ids": {"and_query": ["555", "666"]}, "is_pending": False},
+            "and_query": {"role_ids": {"and_query": ["555"]}, "is_pending": False},
             "before": {"user_id": "777", "guild_joined_at": 1_700_000_000_001},
             "after": {"user_id": "888", "guild_joined_at": 1_700_000_000_002},
         }
@@ -5504,7 +5504,7 @@ class TestRESTClientImplAsync:
             user_id=guilds.MemberSearchQuery(
                 or_query=[StubModel(123)], range=guilds.MemberSearchRangeQuery(gte=StubModel(111), lte=StubModel(222))
             ),
-            usernames=guilds.MemberSearchQuery(or_query=["nyaa"]),
+            usernames=guilds.MemberSearchQuery(or_query="nyaa"),
             role_ids=guilds.MemberSearchQuery(and_query=[StubModel(333), StubModel(444)]),
             guild_joined_at=guilds.MemberSearchQuery(range=guilds.MemberSearchRangeQuery(gte=1_700_000_000_000)),
             safety_signals=guilds.MemberSearchSafetySignals(
@@ -5522,9 +5522,7 @@ class TestRESTClientImplAsync:
             join_source_type=guilds.MemberSearchQuery(or_query=[guilds.GuildMemberJoinSourceType.INVITE]),
             source_invite_code=guilds.MemberSearchQuery(or_query=["abc123"]),
         )
-        and_query = guilds.MemberSearchFilter(
-            role_ids=guilds.MemberSearchQuery(and_query=[StubModel(555), StubModel(666)]), is_pending=False
-        )
+        and_query = guilds.MemberSearchFilter(role_ids=guilds.MemberSearchQuery(and_query="555"), is_pending=False)
 
         result = await rest_client.search_guild_members(
             StubModel(645234123),
