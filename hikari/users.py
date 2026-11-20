@@ -200,9 +200,9 @@ class NameplatePalette(str, enums.Enum):
     """White."""
 
 
-@attrs.define(kw_only=True, weakref_slot=False)
+@attrs.frozen(kw_only=True, weakref_slot=False)
 class Nameplate:
-    """Data for a user's nameplate."""
+    """Immutable data for a user's nameplate."""
 
     sku_id: snowflakes.Snowflake = attrs.field(repr=True)
     """The ID of the nameplate's SKU."""
@@ -249,9 +249,8 @@ class Nameplate:
         try:
             path = _NAMEPLATE_FORMAT_PATHS[requested_format]
         except KeyError:
-            msg = (
-                f"{requested_format} is not a valid format for this asset. Valid formats are: "
-                + ", ".join(_NAMEPLATE_FORMAT_PATHS)
+            msg = f"{requested_format} is not a valid format for this asset. Valid formats are: " + ", ".join(
+                _NAMEPLATE_FORMAT_PATHS
             )
             raise TypeError(msg) from None
 
@@ -259,9 +258,9 @@ class Nameplate:
         return files.URL(f"{urls.COLLECTIBLES_ASSET_BASE_URL}/{asset_path}/{path}")
 
 
-@attrs.define(kw_only=True, weakref_slot=False)
+@attrs.frozen(kw_only=True, weakref_slot=False)
 class Collectibles:
-    """Data for a user's collectibles."""
+    """Immutable data for a user's collectibles."""
 
     nameplate: Nameplate | None = attrs.field(repr=True)
     """The user's nameplate, if they have one."""
