@@ -76,6 +76,7 @@ class TestPartialUser:
             attachments=attachments,
             component=component,
             components=components,
+            nonce="nonce",
             tts=True,
             reply=reply,
             reply_must_exist=False,
@@ -99,6 +100,7 @@ class TestPartialUser:
             attachments=attachments,
             component=component,
             components=components,
+            nonce="nonce",
             tts=True,
             mentions_everyone=False,
             reply_must_exist=False,
@@ -131,6 +133,7 @@ class TestPartialUser:
             attachments=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
+            nonce=undefined.UNDEFINED,
             tts=undefined.UNDEFINED,
             mentions_everyone=undefined.UNDEFINED,
             reply=undefined.UNDEFINED,
@@ -161,6 +164,7 @@ class TestPartialUser:
             attachments=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
+            nonce=undefined.UNDEFINED,
             tts=undefined.UNDEFINED,
             mentions_everyone=undefined.UNDEFINED,
             reply=undefined.UNDEFINED,
@@ -193,9 +197,7 @@ class TestNameplate:
         )
 
     def test_make_url_defaults_to_webm(self, obj):
-        assert obj.make_url().url == (
-            f"{urls.COLLECTIBLES_ASSET_BASE_URL}/nameplates/nameplates/twilight/asset.webm"
-        )
+        assert obj.make_url().url == (f"{urls.COLLECTIBLES_ASSET_BASE_URL}/nameplates/nameplates/twilight/asset.webm")
 
     @pytest.mark.parametrize(
         ("file_format", "path"),

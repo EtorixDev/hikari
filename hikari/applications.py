@@ -23,8 +23,13 @@
 from __future__ import annotations
 
 __all__: typing.Sequence[str] = (
+    "ActivityInstance",
+    "ActivityLocation",
+    "ActivityLocationKind",
     "Application",
     "ApplicationContextType",
+    "ApplicationEventWebhookStatus",
+    "ApplicationEventWebhookType",
     "ApplicationFlags",
     "ApplicationIntegrationConfiguration",
     "ApplicationIntegrationType",
@@ -108,6 +113,61 @@ class ApplicationFlags(enums.Flag):
 
 
 @typing.final
+class ApplicationEventWebhookStatus(int, enums.Enum):
+    """The status of an application's event webhooks."""
+
+    DISABLED = 1
+    """Webhook events are disabled by the developer."""
+
+    ENABLED = 2
+    """Webhook events are enabled by the developer."""
+
+    DISABLED_BY_DISCORD = 3
+    """Webhook events are disabled by Discord, usually due to inactivity."""
+
+
+@typing.final
+class ApplicationEventWebhookType(str, enums.Enum):
+    """The type of an application event webhook."""
+
+    APPLICATION_AUTHORIZED = "APPLICATION_AUTHORIZED"
+    """Sent when an app was authorized by a user to a server or their account."""
+
+    APPLICATION_DEAUTHORIZED = "APPLICATION_DEAUTHORIZED"
+    """Sent when an app was deauthorized by a user."""
+
+    ENTITLEMENT_CREATE = "ENTITLEMENT_CREATE"
+    """Sent when an entitlement was created."""
+
+    ENTITLEMENT_UPDATE = "ENTITLEMENT_UPDATE"
+    """Sent when an entitlement was updated."""
+
+    ENTITLEMENT_DELETE = "ENTITLEMENT_DELETE"
+    """Sent when an entitlement was deleted."""
+
+    QUEST_USER_ENROLLMENT = "QUEST_USER_ENROLLMENT"
+    """Sent when a user was added to a Quest."""
+
+    LOBBY_MESSAGE_CREATE = "LOBBY_MESSAGE_CREATE"
+    """Sent when a message is created in a lobby."""
+
+    LOBBY_MESSAGE_UPDATE = "LOBBY_MESSAGE_UPDATE"
+    """Sent when a message is updated in a lobby."""
+
+    LOBBY_MESSAGE_DELETE = "LOBBY_MESSAGE_DELETE"
+    """Sent when a message is deleted from a lobby."""
+
+    GAME_DIRECT_MESSAGE_CREATE = "GAME_DIRECT_MESSAGE_CREATE"
+    """Sent when a direct message is created during an active Social SDK session."""
+
+    GAME_DIRECT_MESSAGE_UPDATE = "GAME_DIRECT_MESSAGE_UPDATE"
+    """Sent when a direct message is updated during an active Social SDK session."""
+
+    GAME_DIRECT_MESSAGE_DELETE = "GAME_DIRECT_MESSAGE_DELETE"
+    """Sent when a direct message is deleted during an active Social SDK session."""
+
+
+@typing.final
 class OAuth2Scope(str, enums.Enum):
     """OAuth2 Scopes that Discord allows.
 
@@ -183,6 +243,13 @@ class OAuth2Scope(str, enums.Enum):
     CONNECTIONS = "connections"
     """Enables viewing third-party linked accounts such as Twitch."""
 
+    DM_CHANNELS_READ = "dm_channels.read"
+    """Enables viewing information about the user's DMs and group DMs.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
     EMAIL = "email"
     """Enable the application to view the user's email and application info."""
 
@@ -211,6 +278,13 @@ class OAuth2Scope(str, enums.Enum):
         to retrieve this information.
     """
 
+    IDENTIFY_PREMIUM = "identify.premium"
+    """Enables viewing the user's Nitro subscription type through [`hikari.users.OwnUser.premium_type`][].
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
     RELATIONSHIPS_READ = "relationships.read"
     """Enables viewing a user's friend list.
 
@@ -225,11 +299,39 @@ class OAuth2Scope(str, enums.Enum):
         You must be whitelisted to use this scope.
     """
 
+    RPC_ACTIVITIES_WRITE = "rpc.activities.write"
+    """Enables the RPC application to update the user's activity.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
     RPC_MESSAGES_READ = "messages.read"
     """Enables the RPC application to read messages from all channels the user is in."""
 
     RPC_NOTIFICATIONS_READ = "rpc.notifications.read"
-    """Enables the RPC application to read  from all channels the user is in.
+    """Enables the RPC application to receive notifications pushed out to the user.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
+    RPC_VOICE_READ = "rpc.voice.read"
+    """Enables the RPC application to read the user's voice settings and listen for voice events.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
+    RPC_VOICE_WRITE = "rpc.voice.write"
+    """Enables the RPC application to update the user's voice settings.
+
+    !!! note
+        You must be whitelisted to use this scope.
+    """
+
+    VOICE = "voice"
+    """Enables connecting to voice on the user's behalf and seeing all the voice members.
 
     !!! note
         You must be whitelisted to use this scope.
@@ -642,6 +744,56 @@ class InviteApplication(guilds.PartialApplication):
         )
 
 
+@typing.final
+class ActivityLocationKind(str, enums.Enum):
+    """The kind of location an activity instance is running in."""
+
+    GUILD_CHANNEL = "gc"
+    """The activity is running in a guild channel."""
+
+    PRIVATE_CHANNEL = "pc"
+    """The activity is running in a private channel, such as a DM or group DM."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(unsafe_hash=True, kw_only=True, weakref_slot=False)
+class ActivityLocation:
+    """The location an activity instance is running in."""
+
+    id: str = attrs.field(hash=True, repr=True)
+    """The unique identifier for the location."""
+
+    kind: ActivityLocationKind | str = attrs.field(eq=False, hash=False, repr=True)
+    """The kind of location the activity instance is running in."""
+
+    channel_id: snowflakes.Snowflake = attrs.field(eq=False, hash=False, repr=True)
+    """The ID of the channel the activity instance is running in."""
+
+    guild_id: snowflakes.Snowflake | None = attrs.field(eq=False, hash=False, repr=True)
+    """The ID of the guild the activity instance is running in, if any."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(unsafe_hash=True, kw_only=True, weakref_slot=False)
+class ActivityInstance:
+    """Represents a live application activity instance."""
+
+    application_id: snowflakes.Snowflake = attrs.field(eq=False, hash=False, repr=True)
+    """The ID of the application this activity instance belongs to."""
+
+    instance_id: str = attrs.field(hash=True, repr=True)
+    """The unique identifier for the activity instance."""
+
+    launch_id: snowflakes.Snowflake = attrs.field(eq=False, hash=False, repr=True)
+    """The unique identifier for the launch."""
+
+    location: ActivityLocation = attrs.field(eq=False, hash=False, repr=True)
+    """The location this activity instance is running in."""
+
+    users: typing.Sequence[snowflakes.Snowflake] = attrs.field(eq=False, hash=False, repr=False)
+    """The IDs of the users currently connected to this activity instance."""
+
+
 @attrs_extensions.with_copy
 @attrs.define(unsafe_hash=True, kw_only=True, weakref_slot=False)
 class ApplicationInstallParameters:
@@ -688,6 +840,12 @@ class Application(guilds.PartialApplication):
     If the application is not part of a team, this will be [`None`][].
     """
 
+    guild_id: snowflakes.Snowflake | None = attrs.field(eq=False, hash=False, repr=False)
+    """The ID of the guild associated with this application, such as its developer support server."""
+
+    guild: guilds.PartialGuild | None = attrs.field(eq=False, hash=False, repr=False)
+    """The guild associated with this application, such as its developer support server."""
+
     cover_image_hash: str | None = attrs.field(eq=False, hash=False, repr=False)
     """The CDN's hash of this application's default rich presence invite cover image."""
 
@@ -719,6 +877,17 @@ class Application(guilds.PartialApplication):
         attrs.field(eq=False, hash=False, repr=False)
     )
     """The default scopes and permissions for each integration type."""
+
+    event_webhooks_url: str | None = attrs.field(eq=False, hash=False, repr=False)
+    """The URL this application receives webhook events on, if set."""
+
+    event_webhooks_status: ApplicationEventWebhookStatus | int = attrs.field(eq=False, hash=False, repr=False)
+    """The status of this application's event webhooks."""
+
+    event_webhooks_types: typing.Sequence[ApplicationEventWebhookType | str] = attrs.field(
+        eq=False, hash=False, repr=False
+    )
+    """The webhook event types this application subscribes to."""
 
     def make_cover_image_url(
         self,

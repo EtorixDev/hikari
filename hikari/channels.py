@@ -156,6 +156,44 @@ class ChannelFlag(enums.Flag):
         As of writing, this can only be set for forum channels.
     """
 
+    HIDE_MEDIA_DOWNLOAD_OPTIONS = 1 << 15
+    """Hides the embedded media download options.
+
+    !!! note
+        As of writing, this can only be set for media channels.
+    """
+
+    CHANNEL_OBFUSCATED = 1 << 17
+    """The channel's metadata has been obfuscated because the current user cannot view it.
+
+    Obfuscated channels have their sensitive fields nulled, reduced or
+    replaced with placeholder values (e.g. the channel's name becomes
+    `"___hidden___"`) and their permission overwrites will contain a single
+    overwrite denying [`hikari.permissions.Permissions.VIEW_CHANNEL`][] for
+    the guild's `@everyone` role. The channel's ID, type, position and parent
+    ID are never obfuscated.
+
+    This flag is the only reliable way to detect whether a channel has been
+    obfuscated and is only ever set on channels received over the gateway;
+    the REST API omits obfuscated channels entirely instead.
+
+    !!! note
+        Until November 16, 2026, channels are only obfuscated if the
+        application has opted into the
+        [`hikari.capabilities.GatewayCapabilities.CHANNEL_OBFUSCATION`][]
+        capability or through the **Private Channel Obfuscation** developer
+        portal toggle. After that, obfuscation will apply to all
+        applications automatically.
+    """
+
+    IS_SPOILER_CHANNEL = 1 << 21
+    """Users must opt in to view the channel's contents.
+
+    !!! note
+        This can be set on all textual guild channels and voice channels
+        except stage channels, and only if the channel is not NSFW.
+    """
+
 
 @typing.final
 class VideoQualityMode(int, enums.Enum):
@@ -504,6 +542,7 @@ class TextableChannel(PartialChannel):
         stickers: undefined.UndefinedOr[
             snowflakes.SnowflakeishSequence[stickers_.PartialSticker]
         ] = undefined.UNDEFINED,
+        nonce: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         reply: undefined.UndefinedOr[snowflakes.SnowflakeishOr[messages_.PartialMessage]] = undefined.UNDEFINED,
         reply_must_exist: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -586,6 +625,9 @@ class TextableChannel(PartialChannel):
             As of writing, bots can only send custom stickers from the current guild.
         tts
             If provided, whether the message will be TTS (Text To Speech).
+        nonce
+            If provided, a nonce that can be used for optimistic message
+            sending.
         reply
             If provided, the message to reply to.
         reply_must_exist
@@ -662,6 +704,7 @@ class TextableChannel(PartialChannel):
             embeds=embeds,
             sticker=sticker,
             stickers=stickers,
+            nonce=nonce,
             tts=tts,
             reply=reply,
             reply_must_exist=reply_must_exist,
@@ -883,6 +926,9 @@ class GroupDMChannel(PrivateChannel):
     If the group DM was not created by a bot, this will be [`None`][].
     """
 
+    is_managed: bool = attrs.field(eq=False, hash=False, repr=False)
+    """Whether the group DM is managed by an application via the `gdm.join` OAuth2 scope."""
+
     @typing_extensions.override
     def __str__(self) -> str:
         if self.name is None:
@@ -940,6 +986,13 @@ class GuildChannel(PartialChannel):
 
     guild_id: snowflakes.Snowflake = attrs.field(eq=False, hash=False, repr=True)
     """The ID of the guild the channel belongs to."""
+
+    application_id: snowflakes.Snowflake | None = attrs.field(eq=False, hash=False, repr=False)
+    """The ID of the application associated with this channel.
+
+    This will be [`None`][] for channels which are not associated with an
+    application.
+    """
 
     parent_id: snowflakes.Snowflake | None = attrs.field(eq=False, hash=False, repr=True)
     """The ID of the parent channel the channel belongs to.
@@ -1155,6 +1208,14 @@ class PermissibleGuildChannel(GuildChannel):
     """The permission overwrites for the channel.
 
     This maps the ID of the entity in the overwrite to the overwrite data.
+    """
+
+    flags: ChannelFlag = attrs.field(eq=False, hash=False, repr=False)
+    """The channel flags for this channel.
+
+    If [`hikari.channels.ChannelFlag.CHANNEL_OBFUSCATED`][] is set then this
+    channel's metadata has been obfuscated because the application cannot
+    view it.
     """
 
     async def edit_overwrite(
@@ -1519,13 +1580,6 @@ class GuildForumChannel(PermissibleGuildChannel):
     This may be be either 1 hour, 1 day, 3 days or 1 week.
     """
 
-    flags: ChannelFlag = attrs.field(eq=False, hash=False, repr=False)
-    """The channel flags for this channel.
-
-    !!! note
-        As of writing, the only flag that can be set is [`hikari.channels.ChannelFlag.REQUIRE_TAG`][].
-    """
-
     available_tags: typing.Sequence[ForumTag] = attrs.field(eq=False, hash=False, repr=False)
     """The available tags to select from when creating a thread."""
 
@@ -1547,7 +1601,7 @@ class GuildForumChannel(PermissibleGuildChannel):
     """
 
 
-WebhookChannelT = typing.Union[GuildTextChannel, GuildNewsChannel]
+WebhookChannelT = GuildTextChannel | GuildNewsChannel
 """Union of the channel types which incoming and follower webhooks can be attached to.
 
 The following types are in this:
@@ -1817,13 +1871,6 @@ class GuildMediaChannel(PermissibleGuildChannel):
     """The auto archive duration Discord's client defaults to for threads in this channel.
 
     This may be be either 1 hour, 1 day, 3 days or 1 week.
-    """
-
-    flags: ChannelFlag = attrs.field(eq=False, hash=False, repr=False)
-    """The channel flags for this channel.
-
-    .. note::
-        As of writing, the only flag that can be set is `ChannelFlag.REQUIRE_TAG`.
     """
 
     available_tags: typing.Sequence[ForumTag] = attrs.field(eq=False, hash=False, repr=False)

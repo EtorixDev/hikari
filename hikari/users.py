@@ -249,9 +249,8 @@ class Nameplate:
         try:
             path = _NAMEPLATE_FORMAT_PATHS[requested_format]
         except KeyError:
-            msg = (
-                f"{requested_format} is not a valid format for this asset. Valid formats are: "
-                + ", ".join(_NAMEPLATE_FORMAT_PATHS)
+            msg = f"{requested_format} is not a valid format for this asset. Valid formats are: " + ", ".join(
+                _NAMEPLATE_FORMAT_PATHS
             )
             raise TypeError(msg) from None
 
@@ -567,6 +566,7 @@ class PartialUser(snowflakes.Unique, abc.ABC):
         components: undefined.UndefinedOr[typing.Sequence[special_endpoints.ComponentBuilder]] = undefined.UNDEFINED,
         embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
         embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
+        nonce: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         reply: undefined.UndefinedOr[snowflakes.SnowflakeishOr[messages.PartialMessage]] = undefined.UNDEFINED,
         reply_must_exist: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -639,6 +639,12 @@ class PartialUser(snowflakes.Unique, abc.ABC):
         tts
             If provided, whether the message will be read out by a screen
             reader using Discord's TTS (text-to-speech) system.
+        nonce
+            An arbitrary identifier to associate with the message. This
+            can be used to identify it later in received events. If provided,
+            this must be less than 32 bytes. If not provided, then
+            a null value is placed on the message instead. All users can
+            see this value.
         reply
             If provided, the message to reply to.
         reply_must_exist
@@ -726,6 +732,7 @@ class PartialUser(snowflakes.Unique, abc.ABC):
             components=components,
             embed=embed,
             embeds=embeds,
+            nonce=nonce,
             tts=tts,
             reply=reply,
             reply_must_exist=reply_must_exist,

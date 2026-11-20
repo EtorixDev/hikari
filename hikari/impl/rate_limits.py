@@ -45,8 +45,7 @@ from hikari.internal import typing_extensions
 
 if typing.TYPE_CHECKING:
     import types
-
-    from typing_extensions import Self
+    from typing import Self
 
 _LOGGER: typing.Final[logging.Logger] = logging.getLogger("hikari.ratelimits")
 
@@ -473,7 +472,7 @@ class ExponentialBackOff:
     """The current increment."""
 
     maximum: float
-    """This is the max value the backoff can be in a single iteration before an [`asyncio.TimeoutError`][] is raised."""
+    """This is the max value the backoff can be in a single iteration before a [`TimeoutError`][] is raised."""
 
     jitter_multiplier: typing.Final[float]
     """The multiplier for the random jitter."""

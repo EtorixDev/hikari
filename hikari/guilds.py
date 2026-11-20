@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 __all__: typing.Sequence[str] = (
-    "BulkBanResult",
+    "BulkBanResponse",
     "GatewayGuild",
     "Guild",
     "GuildBan",
@@ -85,8 +85,8 @@ from hikari.internal import typing_extensions
 if typing.TYPE_CHECKING:
     import datetime
 
-    from hikari import colors
-    from hikari import colours
+    from hikari import colors as colors_
+    from hikari import colours as colours_
     from hikari import emojis as emojis_
     from hikari import files
     from hikari import locales
@@ -222,6 +222,30 @@ class GuildFeature(str, enums.Enum):
 
     RAID_ALERTS_DISABLED = "RAID_ALERTS_DISABLED"
     """Guild has disabled alerts for join raids in the configured safety alerts channel."""
+
+    ENHANCED_ROLE_COLORS = "ENHANCED_ROLE_COLORS"
+    """Guild is able to set gradient and holographic role colors."""
+
+    PRUNE_REQUIRES_ADMIN = "PRUNE_REQUIRES_ADMIN"
+    """Guild requires the [`hikari.permissions.Permissions.ADMINISTRATOR`][] permission to prune members."""
+
+    ANIMATED_BANNER = "ANIMATED_BANNER"
+    """Guild has access to set an animated guild banner image."""
+
+    AUTO_MODERATION = "AUTO_MODERATION"
+    """Guild has set up auto moderation rules."""
+
+    DEVELOPER_SUPPORT_SERVER = "DEVELOPER_SUPPORT_SERVER"
+    """Guild has been set as a support server on the App Directory."""
+
+    GUESTS_ENABLED = "GUESTS_ENABLED"
+    """Guild has access to guest invites."""
+
+    GUILD_TAGS = "GUILD_TAGS"
+    """Guild has access to set guild tags."""
+
+    ROLE_ICONS = "ROLE_ICONS"
+    """Guild is able to set role icons."""
 
 
 @typing.final
@@ -392,22 +416,22 @@ class GuildMemberFlags(enums.Flag):
     """Member has started onboarding."""
 
     IS_GUEST = 1 << 4
-    """Member is a guest and not a true member."""
+    """Member is a guest and can only access the voice channel they were invited to."""
 
     STARTED_HOME_ACTIONS = 1 << 5
-    """Member has started the new member actions in the server guide."""
+    """Member has started the Server Guide new member actions."""
 
     COMPLETED_HOME_ACTIONS = 1 << 6
-    """Member has completed all of the new member actions in the server guide."""
+    """Member has completed the Server Guide new member actions."""
 
-    AUTOMOD_QUARANTINED_NAME = 1 << 7
-    """Member has been indefinitely quarantined by AutoMod for their name."""
+    AUTOMOD_QUARANTINED_USERNAME = 1 << 7
+    """Member's username, display name or nickname is blocked by auto moderation."""
 
     DM_SETTINGS_UPSELL_ACKNOWLEDGED = 1 << 9
-    """Member has acknowledged the DM privacy settings upsell modal."""
+    """Member has dismissed the DM settings upsell."""
 
     AUTOMOD_QUARANTINED_GUILD_TAG = 1 << 10
-    """Member has been indefinitely quarantined by AutoMod for their primary guild tag."""
+    """Member's guild tag is blocked by auto moderation."""
 
 
 @typing.final
@@ -732,7 +756,7 @@ class Member(users.User):
 
     @property
     @typing_extensions.override
-    def accent_color(self) -> colors.Color | None:
+    def accent_color(self) -> colors_.Color | None:
         return self.user.accent_color
 
     @property
@@ -1405,10 +1429,17 @@ class PartialRole(snowflakes.Unique):
 class Role(PartialRole):
     """Represents a guild bound role object."""
 
-    color: colors.Color = attrs.field(eq=False, hash=False, repr=True)
+    color: colors_.Color = attrs.field(eq=False, hash=False, repr=True)
     """The colour of this role.
 
     This will be applied to a member's name in chat if it's their top coloured role.
+    """
+
+    colors: colors_.ColorGradient = attrs.field(eq=False, hash=False, repr=True)
+    """The colors of this role.
+
+    Unlike the [`color`][hikari.guilds.Role.color] field, this can also hold
+    the role's gradient or holographic colors if set.
     """
 
     guild_id: snowflakes.Snowflake = attrs.field(eq=False, hash=False, repr=True)
@@ -1473,9 +1504,14 @@ class Role(PartialRole):
     """Whether this role is a linked role in the guild."""
 
     @property
-    def colour(self) -> colours.Colour:
+    def colour(self) -> colours_.Colour:
         """Alias for the `color` field."""
         return self.color
+
+    @property
+    def colours(self) -> colours_.ColourGradient:
+        """Alias for the `colors` field."""
+        return self.colors
 
     @property
     @typing_extensions.override
@@ -1852,18 +1888,6 @@ class GuildOnboardingPrompt(snowflakes.Unique):
 
 @attrs_extensions.with_copy
 @attrs.define(kw_only=True, weakref_slot=False)
-class BulkBanResult:
-    """Represents the result of a bulk guild ban."""
-
-    banned_user_ids: typing.Sequence[snowflakes.Snowflake] = attrs.field(repr=True)
-    """The IDs of the users that were successfully banned."""
-
-    failed_user_ids: typing.Sequence[snowflakes.Snowflake] = attrs.field(repr=True)
-    """The IDs of the users that could not be banned or were already banned."""
-
-
-@attrs_extensions.with_copy
-@attrs.define(kw_only=True, weakref_slot=False)
 class GuildBan:
     """Used to represent guild bans."""
 
@@ -1872,6 +1896,21 @@ class GuildBan:
 
     user: users.User = attrs.field(repr=True)
     """The object of the user this ban targets."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class BulkBanResponse:
+    """The result of a bulk ban."""
+
+    banned_users: typing.Sequence[snowflakes.Snowflake] = attrs.field(repr=True)
+    """IDs of the users which were successfully banned."""
+
+    failed_users: typing.Sequence[snowflakes.Snowflake] = attrs.field(repr=True)
+    """IDs of the users which could not be banned.
+
+    A user ends up here when they could not be banned or were already banned.
+    """
 
 
 @attrs_extensions.with_copy
@@ -2001,53 +2040,6 @@ class PartialGuild(snowflakes.Unique):
             If an internal error occurs on Discord while handling the request.
         """
         await self.app.rest.ban_user(self.id, user, delete_message_seconds=delete_message_seconds, reason=reason)
-
-    async def bulk_ban(
-        self,
-        users: snowflakes.SnowflakeishSequence[users.PartialUser],
-        *,
-        delete_message_seconds: undefined.UndefinedOr[time.Intervalish] = undefined.UNDEFINED,
-        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
-    ) -> BulkBanResult:
-        """Ban up to 200 users from this guild.
-
-        Parameters
-        ----------
-        users
-            The users to ban from the guild. This must contain between 1 and 200 users.
-        delete_message_seconds
-            If provided, the number of seconds to delete messages for.
-            This can be represented as either an int/float between 0 and 604800 (7 days), or
-            a [`datetime.timedelta`][] object.
-        reason
-            If provided, the reason that will be recorded in the audit logs.
-            Maximum of 512 characters.
-
-        Returns
-        -------
-        hikari.guilds.BulkBanResult
-            The IDs of the users that were and were not banned.
-
-        Raises
-        ------
-        hikari.errors.BadRequestError
-            If any of the fields that are passed have an invalid value or none of the users could be banned.
-        hikari.errors.ForbiddenError
-            If you are missing either the [`hikari.permissions.Permissions.BAN_MEMBERS`][] or
-            [`hikari.permissions.Permissions.MANAGE_GUILD`][] permission.
-        hikari.errors.UnauthorizedError
-            If you are unauthorized to make the request (invalid/missing token).
-        hikari.errors.NotFoundError
-            If the guild is not found.
-        hikari.errors.RateLimitTooLongError
-            Raised in the event that a rate limit occurs that is
-            longer than `max_rate_limit` when making a request.
-        hikari.errors.InternalServerError
-            If an internal error occurs on Discord while handling the request.
-        """
-        return await self.app.rest.bulk_ban_users(
-            self.id, users, delete_message_seconds=delete_message_seconds, reason=reason
-        )
 
     async def unban(
         self,

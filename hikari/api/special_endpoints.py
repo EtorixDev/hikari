@@ -77,8 +77,7 @@ from hikari.internal import typing_extensions
 
 if typing.TYPE_CHECKING:
     import types
-
-    from typing_extensions import Self
+    from typing import Self
 
     from hikari import applications
     from hikari import auto_mod
@@ -98,7 +97,7 @@ if typing.TYPE_CHECKING:
     from hikari.api import rest as rest_api
     from hikari.interactions import base_interactions
 
-_ParentT = typing.TypeVar("_ParentT")
+_ParentT_co = typing.TypeVar("_ParentT_co", covariant=True)
 
 
 class TypingIndicator(abc.ABC):
@@ -147,7 +146,7 @@ class ChannelRepositioner(abc.ABC):
     channel_repositioner = rest.reposition_channels(
         guild=GUILD_ID, reason="The reason."
     )
-    channel_repositioner.add_reposition_channel(position=2, channel=CHANNEL_ID)
+    channel_repositioner.add_reposition_channel(CHANNEL_ID, position=2)
 
     await channel_repositioner
     ```
@@ -155,7 +154,7 @@ class ChannelRepositioner(abc.ABC):
     ```py
     channel_repositioner = rest.reposition_channels(guild=GUILD_ID)
     channel_repositioner.add_reposition_channel(
-        position=1, channel=CHANNEL_ID, lock_permissions=True, parent=CATEGORY_ID
+        CHANNEL_ID, position=1, lock_permissions=True, parent=CATEGORY_ID
     )
     # when lock_permissions is set to True, the channels permissions will be synced
     # with the new parent.
@@ -233,21 +232,23 @@ class ChannelRepositioner(abc.ABC):
     @abc.abstractmethod
     def add_reposition_channel(
         self,
-        position: int,
         channel: snowflakes.SnowflakeishOr[channels.GuildChannel],
         *,
+        position: undefined.UndefinedOr[int] = undefined.UNDEFINED,
         lock_permissions: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
-        parent: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]] = undefined.UNDEFINED,
+        parent: undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]] = undefined.UNDEFINED,
     ) -> Self:
         """Add a channel that should be repositioned to the channel repositioner.
 
         Parameters
         ----------
-        position
-            The new position for the channel.
         channel
             The channel that should be repositioned. This can either be a
             `[hikari.channels.GuildChannel`][] or the id of the channel.
+        position
+            The new position for the channel.
+
+            If [`hikari.undefined.UNDEFINED`][], the position is left unchanged.
         lock_permissions
             Whether the channel should sync permissions to the new parent channel or not.
             When set to `False` or `UNDEFINED` the channel will not sync its permissions
@@ -255,6 +256,8 @@ class ChannelRepositioner(abc.ABC):
             permissions to the new parent.
         parent
             The id of the parent where this channel should be repositioned under.
+
+            If [`None`][], the channel is moved out of its current category.
 
         Returns
         -------
@@ -302,11 +305,11 @@ class RepositionedChannel(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def position(self) -> int:
+    def position(self) -> undefined.UndefinedOr[int]:
         """Position property."""
 
     @abc.abstractmethod
-    def set_position(self, position: int) -> Self:
+    def set_position(self, position: undefined.UndefinedOr[int]) -> Self:
         """Set the position.
 
         Returns
@@ -332,11 +335,11 @@ class RepositionedChannel(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def parent(self) -> undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]:
+    def parent(self) -> undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]:
         """Parent property."""
 
     @abc.abstractmethod
-    def set_parent(self, parent: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]) -> Self:
+    def set_parent(self, parent: undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]) -> Self:
         """Set the parent.
 
         Returns
@@ -1842,14 +1845,14 @@ class SelectMenuBuilder(ComponentBuilder, abc.ABC):
         """
 
 
-class TextSelectMenuBuilder(SelectMenuBuilder, abc.ABC, typing.Generic[_ParentT]):
+class TextSelectMenuBuilder(SelectMenuBuilder, abc.ABC, typing.Generic[_ParentT_co]):
     """Builder class for a text select menu."""
 
     __slots__: typing.Sequence[str] = ()
 
     @property
     @abc.abstractmethod
-    def parent(self) -> _ParentT:
+    def parent(self) -> _ParentT_co:
         """Parent object which initialised this builder."""
 
     @property
@@ -2960,21 +2963,21 @@ class PollAnswerBuilder(abc.ABC):
 
 
 if typing.TYPE_CHECKING:
-    MessageActionRowBuilderComponentsT = typing.Union[ButtonBuilder, SelectMenuBuilder]
+    MessageActionRowBuilderComponentsT = ButtonBuilder | SelectMenuBuilder
 
     ModalActionRowBuilderComponentsT = TextInputBuilder
 
-    ContainerBuilderComponentsT = typing.Union[
-        MessageActionRowBuilder,
-        TextDisplayComponentBuilder,
-        SectionComponentBuilder,
-        MediaGalleryComponentBuilder,
-        SeparatorComponentBuilder,
-        FileComponentBuilder,
-    ]
+    ContainerBuilderComponentsT = (
+        MessageActionRowBuilder
+        | TextDisplayComponentBuilder
+        | SectionComponentBuilder
+        | MediaGalleryComponentBuilder
+        | SeparatorComponentBuilder
+        | FileComponentBuilder
+    )
 
-    SectionBuilderAccessoriesT = typing.Union[ButtonBuilder, ThumbnailComponentBuilder]
-    SectionBuilderComponentsT = typing.Union[TextDisplayComponentBuilder]
+    SectionBuilderAccessoriesT = ButtonBuilder | ThumbnailComponentBuilder
+    SectionBuilderComponentsT = TextDisplayComponentBuilder
 
 
 class AutoModActionBuilder(abc.ABC):

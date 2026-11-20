@@ -24,15 +24,24 @@ from __future__ import annotations
 
 __all__: typing.Sequence[str] = (
     "Attachment",
+    "AttachmentFlag",
     "Message",
     "MessageActivity",
     "MessageActivityType",
     "MessageFlag",
     "MessageReference",
+    "MessageSearchAuthorType",
+    "MessageSearchEmbedType",
+    "MessageSearchHasType",
+    "MessageSearchResult",
+    "MessageSearchSortMode",
+    "MessageSearchSortOrder",
     "MessageType",
     "PartialMessage",
     "PinnedMessage",
     "Reaction",
+    "ReactionCountDetails",
+    "ReactionType",
 )
 
 import typing
@@ -55,6 +64,8 @@ if typing.TYPE_CHECKING:
     import datetime
 
     from hikari import channels as channels_
+    from hikari import colors as colors_
+    from hikari import colours
     from hikari import embeds as embeds_
     from hikari import emojis as emojis_
     from hikari import polls as polls_
@@ -259,6 +270,41 @@ class MessageActivityType(int, enums.Enum):
     JOIN_REQUEST = 5
     """Request to join an activity."""
 
+    STREAM_REQUEST = 6
+    """Request to stream an activity."""
+
+
+@typing.final
+class AttachmentFlag(enums.Flag):
+    """Additional flags for attachments."""
+
+    NONE = 0
+    """None."""
+
+    IS_CLIP = 1 << 0
+    """This attachment is a clip from a stream."""
+
+    IS_THUMBNAIL = 1 << 1
+    """This attachment is the thumbnail of a thread in a media channel."""
+
+    IS_REMIX = 1 << 2
+    """This attachment has been edited using the remix feature on mobile."""
+
+    IS_SPOILER = 1 << 3
+    """This attachment was marked as a spoiler and is blurred until clicked."""
+
+    CONTAINS_EXPLICIT_CONTENT = 1 << 4
+    """This attachment was flagged as explicit by Discord's content scanning."""
+
+    IS_ANIMATED = 1 << 5
+    """This attachment is an animated image."""
+
+    CONTAINS_GORE_CONTENT = 1 << 6
+    """This attachment was flagged as gore by Discord's content scanning."""
+
+    CONTAINS_SELF_HARM_CONTENT = 1 << 7
+    """This attachment was flagged as self-harm by Discord's content scanning."""
+
 
 @attrs_extensions.with_copy
 @attrs.define(unsafe_hash=True, kw_only=True, weakref_slot=False)
@@ -319,9 +365,45 @@ class Attachment(snowflakes.Unique, files.WebResource):
     waveform: str | None = attrs.field(hash=False, eq=False, repr=False)
     """A base64 encoded representation of the sampled waveform for the voice message."""
 
+    placeholder: str | None = attrs.field(hash=False, eq=False, repr=False)
+    """A thumbhash placeholder of the attachment, if it is an image or video."""
+
+    placeholder_version: int | None = attrs.field(hash=False, eq=False, repr=False)
+    """The version of the placeholder, if present."""
+
+    flags: AttachmentFlag = attrs.field(hash=False, eq=False, repr=False)
+    """The flags of this attachment.
+
+    Content scanning can finish after the message was sent, so the
+    `CONTAINS_*` flags may only show up in a later message update.
+    """
+
     @typing_extensions.override
     def __str__(self) -> str:
         return self.filename
+
+
+@typing.final
+class ReactionType(int, enums.Enum):
+    """The type of a reaction."""
+
+    NORMAL = 0
+    """A normal reaction."""
+
+    BURST = 1
+    """A super (burst) reaction."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class ReactionCountDetails:
+    """A breakdown of a reaction's count per reaction type."""
+
+    burst: int = attrs.field(repr=True)
+    """The number of super reactions."""
+
+    normal: int = attrs.field(repr=True)
+    """The number of normal reactions."""
 
 
 @attrs_extensions.with_copy
@@ -330,13 +412,27 @@ class Reaction:
     """Represents a reaction in a message."""
 
     count: int = attrs.field(eq=False, hash=False, repr=True)
-    """The number of times the emoji has been used to react."""
+    """The total number of times the emoji has been used to react, including super reactions."""
+
+    count_details: ReactionCountDetails = attrs.field(eq=False, hash=False, repr=False)
+    """A breakdown of the reaction count per reaction type."""
 
     emoji: emojis_.UnicodeEmoji | emojis_.CustomEmoji = attrs.field(hash=True, repr=True)
     """The emoji used to react."""
 
     is_me: bool = attrs.field(eq=False, hash=False, repr=False)
     """Whether the current user reacted using this emoji."""
+
+    is_me_burst: bool = attrs.field(eq=False, hash=False, repr=False)
+    """Whether the current user super-reacted using this emoji."""
+
+    burst_colors: typing.Sequence[colors_.Color] = attrs.field(eq=False, hash=False, repr=False)
+    """The colours used for the super reaction animation, empty if this reaction has no super reactions."""
+
+    @property
+    def burst_colours(self) -> typing.Sequence[colours.Colour]:
+        """Alias for the `burst_colors` field."""
+        return self.burst_colors
 
     @typing_extensions.override
     def __str__(self) -> str:
@@ -1073,6 +1169,7 @@ class PartialMessage(snowflakes.Unique):
         stickers: undefined.UndefinedOr[
             snowflakes.SnowflakeishSequence[stickers_.PartialSticker]
         ] = undefined.UNDEFINED,
+        nonce: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         reply: undefined.UndefinedType | snowflakes.SnowflakeishOr[PartialMessage] | bool = undefined.UNDEFINED,
         reply_must_exist: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -1156,6 +1253,9 @@ class PartialMessage(snowflakes.Unique):
             As of writing, bots can only send custom stickers from the current guild.
         tts
             If provided, whether the message will be TTS (Text To Speech).
+        nonce
+            If provided, a nonce that can be used for optimistic message
+            sending.
         reply
             If provided and [`True`][], reply to this message.
             If provided and not [`bool`][], the message to reply to.
@@ -1239,6 +1339,7 @@ class PartialMessage(snowflakes.Unique):
             poll=poll,
             sticker=sticker,
             stickers=stickers,
+            nonce=nonce,
             tts=tts,
             reply=reply,
             reply_must_exist=reply_must_exist,
@@ -1485,6 +1586,13 @@ class Message(PartialMessage):
     member: guilds.Member | None = attrs.field(hash=False, eq=False, repr=False)
     """The member properties for the message's author."""
 
+    channel_type: channels_.ChannelType | int | None = attrs.field(hash=False, eq=False, repr=False)
+    """The type of the channel the message was sent in.
+
+    This is only provided for messages received over the gateway's message
+    create event and will be [`None`][] otherwise.
+    """
+
     content: str | None = attrs.field(hash=False, eq=False, repr=False)
     """The content of the message."""
 
@@ -1575,3 +1683,191 @@ class Message(PartialMessage):
 
     Will be [`None`][] if the message was not used to start a thread.
     """
+
+
+@typing.final
+class MessageSearchAuthorType(str, enums.Enum):
+    """The type of message author to filter a message search by.
+
+    The negated variants exclude messages matching the author type instead.
+    """
+
+    USER = "user"
+    """Match messages sent by user accounts."""
+
+    BOT = "bot"
+    """Match messages sent by bot accounts."""
+
+    WEBHOOK = "webhook"
+    """Match messages sent by webhooks."""
+
+    NOT_USER = "-user"
+    """Exclude messages sent by user accounts."""
+
+    NOT_BOT = "-bot"
+    """Exclude messages sent by bot accounts."""
+
+    NOT_WEBHOOK = "-webhook"
+    """Exclude messages sent by webhooks."""
+
+
+@typing.final
+class MessageSearchHasType(str, enums.Enum):
+    """The type of content to filter a message search by.
+
+    The negated variants exclude messages matching the content type instead.
+    """
+
+    IMAGE = "image"
+    """Match messages that have an image."""
+
+    SOUND = "sound"
+    """Match messages that have a sound attachment."""
+
+    VIDEO = "video"
+    """Match messages that have a video."""
+
+    FILE = "file"
+    """Match messages that have an attachment."""
+
+    STICKER = "sticker"
+    """Match messages that have a sent sticker."""
+
+    EMBED = "embed"
+    """Match messages that have an embed."""
+
+    LINK = "link"
+    """Match messages that have a link."""
+
+    POLL = "poll"
+    """Match messages that have a poll."""
+
+    SNAPSHOT = "snapshot"
+    """Match messages that have a forwarded message."""
+
+    NOT_IMAGE = "-image"
+    """Exclude messages that have an image."""
+
+    NOT_SOUND = "-sound"
+    """Exclude messages that have a sound attachment."""
+
+    NOT_VIDEO = "-video"
+    """Exclude messages that have a video."""
+
+    NOT_FILE = "-file"
+    """Exclude messages that have an attachment."""
+
+    NOT_STICKER = "-sticker"
+    """Exclude messages that have a sent sticker."""
+
+    NOT_EMBED = "-embed"
+    """Exclude messages that have an embed."""
+
+    NOT_LINK = "-link"
+    """Exclude messages that have a link."""
+
+    NOT_POLL = "-poll"
+    """Exclude messages that have a poll."""
+
+    NOT_SNAPSHOT = "-snapshot"
+    """Exclude messages that have a forwarded message."""
+
+
+@typing.final
+class MessageSearchEmbedType(str, enums.Enum):
+    """The type of embed to filter a message search by.
+
+    These do not correspond 1:1 to actual embed types and encompass a wider
+    range of actual types.
+    """
+
+    IMAGE = "image"
+    """Match messages that have an image embed."""
+
+    VIDEO = "video"
+    """Match messages that have a video embed."""
+
+    GIF = "gif"
+    """Match messages that have a gifv embed.
+
+    !!! note
+        Messages sent before February 24, 2026 may not be properly indexed
+        under this embed type.
+    """
+
+    SOUND = "sound"
+    """Match messages that have a sound embed."""
+
+    ARTICLE = "article"
+    """Match messages that have an article embed."""
+
+
+@typing.final
+class MessageSearchSortMode(str, enums.Enum):
+    """The sorting algorithm to use for a message search."""
+
+    TIMESTAMP = "timestamp"
+    """Sort by the message creation time. This is the default."""
+
+    RELEVANCE = "relevance"
+    """Sort by the relevance of the message to the search query."""
+
+
+@typing.final
+class MessageSearchSortOrder(str, enums.Enum):
+    """The direction to sort the messages of a message search in.
+
+    The sort order is not respected when sorting by
+    [`hikari.messages.MessageSearchSortMode.RELEVANCE`][].
+    """
+
+    ASCENDING = "asc"
+    """Sort the messages in ascending order."""
+
+    DESCENDING = "desc"
+    """Sort the messages in descending order. This is the default."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class MessageSearchResult:
+    """The result of a guild message search."""
+
+    doing_deep_historical_index: bool = attrs.field(repr=True)
+    """Whether the guild is undergoing a deep historical indexing operation."""
+
+    documents_indexed: int | None = attrs.field(repr=False)
+    """The number of documents indexed during the current index operation.
+
+    This will be [`None`][] if no index operation is ongoing.
+    """
+
+    total_results: int = attrs.field(repr=True)
+    """The total number of results that match the query.
+
+    !!! note
+        When messages are actively being created or deleted, this may
+        not be accurate.
+    """
+
+    messages: typing.Sequence[Message] = attrs.field(repr=False)
+    """The messages that match the query.
+
+    !!! note
+        Due to speed optimizations, this may contain slightly fewer messages
+        than requested. Do not rely on its length to paginate the results;
+        use the requested offset and
+        [`hikari.messages.MessageSearchResult.total_results`][] instead.
+
+    !!! note
+        Discord omits the reaction data from search results, so
+        [`hikari.messages.Message.reactions`][] will always be empty for
+        these messages. Fetch the message individually if the reactions
+        are needed.
+    """
+
+    threads: typing.Sequence[channels_.GuildThreadChannel] = attrs.field(repr=False)
+    """The threads that contain the returned messages."""
+
+    members: typing.Sequence[channels_.ThreadMember] = attrs.field(repr=False)
+    """A thread member object for each returned thread the current user has joined."""

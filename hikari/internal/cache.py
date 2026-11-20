@@ -70,14 +70,15 @@ if not typing.TYPE_CHECKING:
 
 if typing.TYPE_CHECKING:
     import datetime
+    from typing import Self
 
     import typing_extensions  # noqa: TC004
-    from typing_extensions import Self
 
     from hikari import applications
     from hikari import channels as channels_
     from hikari import components as components_
     from hikari import polls as polls_
+    from hikari import scheduled_events as scheduled_events_
     from hikari import traits
     from hikari import users as users_
     from hikari.interactions import base_interactions
@@ -284,6 +285,8 @@ class GuildRecord:
                 self.members,
                 self.presences,
                 self.roles,
+                self.stickers,
+                self.threads,
                 self.voice_states,
             )
         )
@@ -338,12 +341,17 @@ class InviteData(BaseData[invites.InviteWithMetadata]):
     """A data model for storing invite data in an in-memory cache."""
 
     code: str = attrs.field()
+    type: invites.InviteType | int = attrs.field()
     guild_id: snowflakes.Snowflake | None = attrs.field()
-    channel_id: snowflakes.Snowflake = attrs.field()
+    channel_id: snowflakes.Snowflake | None = attrs.field()
     inviter: RefCell[users_.User] | None = attrs.field()
     target_type: invites.TargetType | int | None = attrs.field()
     target_user: RefCell[users_.User] | None = attrs.field()
     target_application: applications.InviteApplication | None = attrs.field()
+    guild_scheduled_event: scheduled_events_.ScheduledEvent | None = attrs.field()
+    flags: invites.InviteFlags = attrs.field()
+    roles: tuple[invites.InviteRole, ...] = attrs.field()
+    role_ids: tuple[snowflakes.Snowflake, ...] = attrs.field()
     uses: int = attrs.field()
     max_uses: int | None = attrs.field()
     max_age: datetime.timedelta | None = attrs.field()
@@ -354,10 +362,15 @@ class InviteData(BaseData[invites.InviteWithMetadata]):
     def build_entity(self, app: traits.RESTAware, /) -> invites.InviteWithMetadata:
         return invites.InviteWithMetadata(
             code=self.code,
+            type=self.type,
             guild_id=self.guild_id,
             channel_id=self.channel_id,
             target_type=self.target_type,
             target_application=self.target_application,
+            guild_scheduled_event=copy.copy(self.guild_scheduled_event) if self.guild_scheduled_event else None,
+            flags=self.flags,
+            roles=tuple(map(copy.copy, self.roles)),
+            role_ids=self.role_ids,
             uses=self.uses,
             max_uses=self.max_uses,
             max_age=self.max_age,
@@ -391,10 +404,15 @@ class InviteData(BaseData[invites.InviteWithMetadata]):
 
         return cls(
             code=invite.code,
+            type=invite.type,
             guild_id=invite.guild_id,
             channel_id=invite.channel_id,
             target_type=invite.target_type,
             target_application=invite.target_application,
+            guild_scheduled_event=copy.copy(invite.guild_scheduled_event) if invite.guild_scheduled_event else None,
+            flags=invite.flags,
+            roles=tuple(map(copy.copy, invite.roles)),
+            role_ids=tuple(invite.role_ids),
             uses=invite.uses,
             max_uses=invite.max_uses,
             max_age=invite.max_age,
@@ -710,6 +728,7 @@ def _copy_embed(embed: embeds_.Embed) -> embeds_.Embed:
         provider=copy.copy(embed.provider) if embed.provider else None,
         footer=copy.copy(embed.footer) if embed.footer else None,
         fields=[copy.copy(field) for field in embed.fields],
+        flags=embed.flags,
     )
 
 
@@ -721,6 +740,7 @@ class MessageData(BaseData[messages.Message]):
     id: snowflakes.Snowflake = attrs.field()
     channel_id: snowflakes.Snowflake = attrs.field()
     guild_id: snowflakes.Snowflake | None = attrs.field()
+    channel_type: channels_.ChannelType | int | None = attrs.field()
     author: RefCell[users_.User] = attrs.field()
     member: RefCell[MemberData] | None = attrs.field()
     content: str | None = attrs.field()
@@ -788,6 +808,7 @@ class MessageData(BaseData[messages.Message]):
             id=message.id,
             channel_id=message.channel_id,
             guild_id=message.guild_id,
+            channel_type=message.channel_type,
             author=author or RefCell(copy.copy(message.author)),
             member=member,
             content=message.content,
@@ -837,6 +858,7 @@ class MessageData(BaseData[messages.Message]):
             app=app,
             channel_id=self.channel_id,
             guild_id=self.guild_id,
+            channel_type=self.channel_type,
             author=self.author.copy(),
             member=self.member.object.build_entity(app) if self.member else None,
             content=self.content,

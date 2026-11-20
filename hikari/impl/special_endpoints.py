@@ -100,9 +100,9 @@ if not typing.TYPE_CHECKING:
 
 if typing.TYPE_CHECKING:
     import types
+    from typing import Self
 
     import typing_extensions  # noqa: TC004
-    from typing_extensions import Self
 
     from hikari import applications
     from hikari import audit_logs
@@ -127,7 +127,7 @@ if typing.TYPE_CHECKING:
             json: data_binding.JSONObjectBuilder | data_binding.JSONArray | None = None,
             reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
             auth: undefined.UndefinedNoneOr[str] = undefined.UNDEFINED,
-        ) -> None | data_binding.JSONObject | data_binding.JSONArray: ...
+        ) -> data_binding.JSONObject | data_binding.JSONArray | None: ...
 
     _GuildThreadChannelT_co = typing.TypeVar(
         "_GuildThreadChannelT_co", bound=channels.GuildThreadChannel, covariant=True
@@ -145,7 +145,7 @@ if typing.TYPE_CHECKING:
             raise NotImplementedError
 
 
-_ParentT = typing.TypeVar("_ParentT")
+_ParentT_co = typing.TypeVar("_ParentT_co", covariant=True)
 _GuildThreadChannelT = typing.TypeVar("_GuildThreadChannelT", bound=channels.GuildThreadChannel)
 
 
@@ -221,7 +221,7 @@ class TypingIndicator(special_endpoints.TypingIndicator):
                 # second if the request is slow to execute.
                 try:
                     await asyncio.gather(self, asyncio.wait_for(self._rest_close_event.wait(), timeout=9.0))
-                except asyncio.TimeoutError:  # noqa: PERF203
+                except TimeoutError:
                     pass
 
         except (asyncio.CancelledError, errors.ComponentStateConflictError):
@@ -273,11 +273,11 @@ class ChannelRepositioner(special_endpoints.ChannelRepositioner):
     @typing_extensions.override
     def add_reposition_channel(
         self,
-        position: int,
         channel: snowflakes.SnowflakeishOr[channels.GuildChannel],
         *,
+        position: undefined.UndefinedOr[int] = undefined.UNDEFINED,
         lock_permissions: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
-        parent: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]] = undefined.UNDEFINED,
+        parent: undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]] = undefined.UNDEFINED,
     ) -> Self:
         self._positions.append(
             RepositionedChannel(channel=channel, position=position, lock_permissions=lock_permissions, parent=parent)
@@ -306,11 +306,11 @@ class RepositionedChannel(special_endpoints.RepositionedChannel):
     """Standard implementation of [`hikari.api.special_endpoints.RepositionedChannel`][]."""
 
     _channel: snowflakes.SnowflakeishOr[channels.GuildChannel] = attrs.field(repr=True, alias="channel")
-    _position: int = attrs.field(repr=True, alias="position")
+    _position: undefined.UndefinedOr[int] = attrs.field(repr=True, alias="position")
     _lock_permissions: undefined.UndefinedOr[bool] = attrs.field(
         repr=True, default=undefined.UNDEFINED, alias="lock_permissions"
     )
-    _parent: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]] = attrs.field(
+    _parent: undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]] = attrs.field(
         repr=True, default=undefined.UNDEFINED, alias="parent"
     )
 
@@ -326,11 +326,11 @@ class RepositionedChannel(special_endpoints.RepositionedChannel):
 
     @property
     @typing_extensions.override
-    def position(self) -> int:
+    def position(self) -> undefined.UndefinedOr[int]:
         return self._position
 
     @typing_extensions.override
-    def set_position(self, position: int) -> Self:
+    def set_position(self, position: undefined.UndefinedOr[int]) -> Self:
         self._position = position
         return self
 
@@ -346,11 +346,11 @@ class RepositionedChannel(special_endpoints.RepositionedChannel):
 
     @property
     @typing_extensions.override
-    def parent(self) -> undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]:
+    def parent(self) -> undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]:
         return self._parent
 
     @typing_extensions.override
-    def set_parent(self, parent: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]) -> Self:
+    def set_parent(self, parent: undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels.GuildCategory]]) -> Self:
         self._parent = parent
         return self
 
@@ -483,9 +483,9 @@ class ThreadMembersIterator(iterators.BufferedLazyIterator["channels.ThreadMembe
 # circular import issues (once the file has executed, using those resources is
 # not an issue for us).
 class ReactorIterator(iterators.BufferedLazyIterator["users.User"]):
-    """Implementation of an iterator for message reactions."""
+    """Implementation of an iterator for the users who reacted to a message."""
 
-    __slots__: typing.Sequence[str] = ("_entity_factory", "_first_id", "_request_call", "_route")
+    __slots__: typing.Sequence[str] = ("_entity_factory", "_first_id", "_reaction_type", "_request_call", "_route")
 
     def __init__(
         self,
@@ -494,11 +494,13 @@ class ReactorIterator(iterators.BufferedLazyIterator["users.User"]):
         channel: snowflakes.SnowflakeishOr[channels.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages.PartialMessage],
         emoji: str,
+        reaction_type: undefined.UndefinedOr[messages.ReactionType] = undefined.UNDEFINED,
     ) -> None:
         super().__init__()
         self._entity_factory = entity_factory
         self._request_call = request_call
         self._first_id = undefined.UNDEFINED
+        self._reaction_type = reaction_type
         self._route = routes.GET_REACTIONS.compile(channel=channel, message=message, emoji=emoji)
 
     @typing_extensions.override
@@ -506,6 +508,7 @@ class ReactorIterator(iterators.BufferedLazyIterator["users.User"]):
         query = data_binding.StringMapBuilder()
         query.put("after", self._first_id)
         query.put("limit", 100)
+        query.put("type", self._reaction_type, conversion=int)
 
         chunk = await self._request_call(compiled_route=self._route, query=query)
         assert isinstance(chunk, list)
@@ -523,7 +526,14 @@ class ReactorIterator(iterators.BufferedLazyIterator["users.User"]):
 class OwnGuildIterator(iterators.BufferedLazyIterator["applications.OwnGuild"]):
     """Implementation of an iterator for retrieving guilds you are in."""
 
-    __slots__: typing.Sequence[str] = ("_entity_factory", "_first_id", "_newest_first", "_request_call", "_route")
+    __slots__: typing.Sequence[str] = (
+        "_entity_factory",
+        "_first_id",
+        "_newest_first",
+        "_request_call",
+        "_route",
+        "_shard",
+    )
 
     def __init__(
         self,
@@ -532,12 +542,14 @@ class OwnGuildIterator(iterators.BufferedLazyIterator["applications.OwnGuild"]):
         *,
         newest_first: bool,
         first_id: str,
+        shard: undefined.UndefinedOr[int] = undefined.UNDEFINED,
     ) -> None:
         super().__init__()
         self._entity_factory = entity_factory
         self._newest_first = newest_first
         self._request_call = request_call
         self._first_id = first_id
+        self._shard = shard
         self._route = routes.GET_MY_GUILDS.compile()
 
     @typing_extensions.override
@@ -545,6 +557,7 @@ class OwnGuildIterator(iterators.BufferedLazyIterator["applications.OwnGuild"]):
         query = data_binding.StringMapBuilder()
         query.put("with_counts", True)
         query.put("before" if self._newest_first else "after", self._first_id)
+        query.put("shard", self._shard)
         # We rely on Discord's default for the limit here since for this endpoint this has always scaled
         # along side the maximum page size limit to match the maximum amount of guilds a user can be in.
 
@@ -626,15 +639,15 @@ class MemberIterator(iterators.BufferedLazyIterator["guilds.Member"]):
         entity_factory: entity_factory_.EntityFactory,
         request_call: _RequestCallSig,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        *,
+        first_id: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> None:
         super().__init__()
         self._guild_id = snowflakes.Snowflake(str(int(guild)))
         self._route = routes.GET_GUILD_MEMBERS.compile(guild=guild)
         self._request_call = request_call
         self._entity_factory = entity_factory
-        # This starts at the default provided by Discord instead of the max snowflake
-        # because that caused Discord to take about 2 seconds more to return the first response.
-        self._first_id = undefined.UNDEFINED
+        self._first_id = first_id
 
     @typing_extensions.override
     async def _next_chunk(self) -> typing.Generator[guilds.Member, typing.Any, None] | None:
@@ -715,6 +728,7 @@ class AuditLogIterator(iterators.LazyIterator["audit_logs.AuditLog"]):
 
     __slots__: typing.Sequence[str] = (
         "_action_type",
+        "_direction",
         "_entity_factory",
         "_first_id",
         "_guild_id",
@@ -728,13 +742,21 @@ class AuditLogIterator(iterators.LazyIterator["audit_logs.AuditLog"]):
         entity_factory: entity_factory_.EntityFactory,
         request_call: _RequestCallSig,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        before: undefined.UndefinedOr[str],
-        user: undefined.UndefinedOr[snowflakes.SnowflakeishOr[users.PartialUser]],
-        action_type: undefined.UndefinedOr[audit_logs.AuditLogEventType | int],
+        *,
+        before: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        after: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        user: undefined.UndefinedOr[snowflakes.SnowflakeishOr[users.PartialUser]] = undefined.UNDEFINED,
+        action_type: undefined.UndefinedOr[audit_logs.AuditLogEventType | int] = undefined.UNDEFINED,
     ) -> None:
         self._action_type = action_type
         self._entity_factory = entity_factory
-        self._first_id = before
+        self._first_id: undefined.UndefinedOr[str]
+        if after is not undefined.UNDEFINED:
+            self._direction = "after"
+            self._first_id = after
+        else:
+            self._direction = "before"
+            self._first_id = before
         self._guild_id = snowflakes.Snowflake(guild)
         self._request_call = request_call
         self._route = routes.GET_GUILD_AUDIT_LOGS.compile(guild=guild)
@@ -746,7 +768,7 @@ class AuditLogIterator(iterators.LazyIterator["audit_logs.AuditLog"]):
         query.put("limit", 100)
         query.put("user_id", self._user)
         query.put("action_type", self._action_type, conversion=int)
-        query.put("before", self._first_id)
+        query.put(self._direction, self._first_id)
 
         response = await self._request_call(compiled_route=self._route, query=query)
         assert isinstance(response, dict)
@@ -759,7 +781,8 @@ class AuditLogIterator(iterators.LazyIterator["audit_logs.AuditLog"]):
         # Since deserialize_audit_log may skip entries it doesn't recognise,
         # first_id has to be calculated based on the raw payload as log.entries
         # may be missing entries.
-        self._first_id = str(min(entry["id"] for entry in audit_log_entries))
+        aggregate = min if self._direction == "before" else max
+        self._first_id = str(aggregate(int(entry["id"]) for entry in audit_log_entries))
         return log
 
 
@@ -2084,11 +2107,11 @@ class SelectMenuBuilder(special_endpoints.SelectMenuBuilder):
 
 
 @attrs.define(init=False, weakref_slot=False)
-class TextSelectMenuBuilder(SelectMenuBuilder, special_endpoints.TextSelectMenuBuilder[_ParentT]):
+class TextSelectMenuBuilder(SelectMenuBuilder, special_endpoints.TextSelectMenuBuilder[_ParentT_co]):
     """Builder class for text select menus."""
 
     _options: list[special_endpoints.SelectOptionBuilder] = attrs.field()
-    _parent: _ParentT | None = attrs.field()
+    _parent: _ParentT_co | None = attrs.field()
     _type: typing.Literal[component_models.ComponentType.TEXT_SELECT_MENU] = attrs.field()
 
     if not typing.TYPE_CHECKING:
@@ -2102,7 +2125,7 @@ class TextSelectMenuBuilder(SelectMenuBuilder, special_endpoints.TextSelectMenuB
         *,
         id: undefined.UndefinedOr[int] = undefined.UNDEFINED,
         custom_id: str,
-        parent: _ParentT,
+        parent: _ParentT_co,
         options: typing.Sequence[special_endpoints.SelectOptionBuilder] = (),
         placeholder: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         min_values: int = 0,
@@ -2128,7 +2151,7 @@ class TextSelectMenuBuilder(SelectMenuBuilder, special_endpoints.TextSelectMenuB
         *,
         id: undefined.UndefinedOr[int] = undefined.UNDEFINED,
         custom_id: str,
-        parent: _ParentT | None = None,
+        parent: _ParentT_co | None = None,
         options: typing.Sequence[special_endpoints.SelectOptionBuilder] = (),
         placeholder: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         min_values: int = 0,
@@ -2149,7 +2172,7 @@ class TextSelectMenuBuilder(SelectMenuBuilder, special_endpoints.TextSelectMenuB
 
     @property
     @typing_extensions.override
-    def parent(self) -> _ParentT:
+    def parent(self) -> _ParentT_co:
         if self._parent is None:
             msg = "This menu has no parent"
             raise RuntimeError(msg)

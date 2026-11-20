@@ -169,6 +169,11 @@ class TestRole:
             id=snowflakes.Snowflake(979899100),
             name="@everyone",
             color=colors.Color(0x1A2B3C),
+            colors=colors.ColorGradient(
+                primary_color=colors.Color(0x1A2B3C),
+                secondary_color=colors.Color(0x2B3C4D),
+                tertiary_color=colors.Color(0x3C4D5E),
+            ),
             guild_id=snowflakes.Snowflake(112233),
             is_hoisted=False,
             icon_hash="icon_hash",
@@ -187,6 +192,9 @@ class TestRole:
 
     def test_colour_property(self, model):
         assert model.colour == colors.Color(0x1A2B3C)
+
+    def test_colours_property(self, model):
+        assert model.colours is model.colors
 
     def test_make_icon_url_format_set_to_deprecated_ext_argument_if_provided(self, model):
         with mock.patch.object(
@@ -778,17 +786,6 @@ class TestPartialGuild:
         model.app.rest.ban_user.assert_awaited_once_with(90210, 4321, delete_message_seconds=864000, reason="Go away!")
 
     @pytest.mark.asyncio
-    async def test_bulk_ban(self, model):
-        model.app.rest.bulk_ban_users = mock.AsyncMock()
-
-        result = await model.bulk_ban([4321, 5432], delete_message_seconds=864000, reason="Go away!")
-
-        assert result is model.app.rest.bulk_ban_users.return_value
-        model.app.rest.bulk_ban_users.assert_awaited_once_with(
-            90210, [4321, 5432], delete_message_seconds=864000, reason="Go away!"
-        )
-
-    @pytest.mark.asyncio
     async def test_unban(self, model):
         model.app.rest.unban_user = mock.AsyncMock()
         await model.unban(4321, reason="Comeback!!")
@@ -1163,7 +1160,7 @@ class TestGuild:
             incidents=guilds.GuildIncidents(
                 invites_disabled_until=None,
                 dms_disabled_until=None,
-                dm_spam_detected_at=datetime.datetime(2015, 5, 13, 1, 1, 1, 1, tzinfo=datetime.timezone.utc),
+                dm_spam_detected_at=datetime.datetime(2015, 5, 13, 1, 1, 1, 1, tzinfo=datetime.UTC),
                 raid_detected_at=None,
             ),
             name="some guild",
@@ -1536,7 +1533,7 @@ class TestRestGuild:
             incidents=guilds.GuildIncidents(
                 invites_disabled_until=None,
                 dms_disabled_until=None,
-                dm_spam_detected_at=datetime.datetime(2015, 5, 13, 1, 1, 1, 1, tzinfo=datetime.timezone.utc),
+                dm_spam_detected_at=datetime.datetime(2015, 5, 13, 1, 1, 1, 1, tzinfo=datetime.UTC),
                 raid_detected_at=None,
             ),
             name="some guild",

@@ -30,12 +30,16 @@ __all__: typing.Sequence[str] = (
     "AuditLogEventType",
     "BaseAuditLogEntryInfo",
     "ChannelOverwriteEntryInfo",
+    "ChannelPositionUpdateEntryInfo",
     "MemberDisconnectEntryInfo",
     "MemberMoveEntryInfo",
     "MemberPruneEntryInfo",
     "MessageBulkDeleteEntryInfo",
     "MessageDeleteEntryInfo",
     "MessagePinEntryInfo",
+    "RolePositionUpdateEntryInfo",
+    "VoiceChannelStatusCreateEntryInfo",
+    "VoiceChannelStatusDeleteEntryInfo",
 )
 
 import typing
@@ -171,6 +175,9 @@ class AuditLogChangeKey(str, enums.Enum):
     COLOR = "color"
     """Color."""
 
+    COLORS = "colors"
+    """Colors, as a role colors object."""
+
     COMMAND_ID = "command_id"
     """Command ID."""
 
@@ -274,6 +281,9 @@ class AuditLogChangeKey(str, enums.Enum):
     COLOUR = COLOR
     """Alias for [`hikari.audit_logs.AuditLogChangeKey.COLOR`][]."""
 
+    COLOURS = COLORS
+    """Alias for [`hikari.audit_logs.AuditLogChangeKey.COLORS`][]."""
+
 
 @attrs_extensions.with_copy
 @attrs.define(kw_only=True, weakref_slot=False)
@@ -315,6 +325,9 @@ class AuditLogEventType(int, enums.Enum):
     CHANNEL_OVERWRITE_DELETE = 15
     """Indicates that a permission overwrite was deleted from a channel."""
 
+    CHANNEL_POSITION_UPDATE = 16
+    """Indicates that channels were reordered."""
+
     MEMBER_KICK = 20
     """Indicates that a member was kicked from guild."""
 
@@ -350,6 +363,9 @@ class AuditLogEventType(int, enums.Enum):
 
     ROLE_DELETE = 32
     """Indicates that a role was deleted."""
+
+    ROLE_POSITION_UPDATE = 33
+    """Indicates that roles were reordered."""
 
     INVITE_CREATE = 40
     """Indicates that a guild invite was created."""
@@ -490,7 +506,13 @@ class AuditLogEventType(int, enums.Enum):
     """Indicates that guild server guide was created."""
 
     HOME_SETTINGS_UPDATE = 191
-    """Indicates that guild server guide was uodated."""
+    """Indicates that guild server guide was updated."""
+
+    VOICE_CHANNEL_STATUS_CREATE = 192
+    """Indicates that a voice channel status was set by a user."""
+
+    VOICE_CHANNEL_STATUS_DELETE = 193
+    """Indicates that a voice channel status was deleted by a user."""
 
 
 @attrs.define(kw_only=True, weakref_slot=False)
@@ -518,6 +540,15 @@ class ChannelOverwriteEntryInfo(BaseAuditLogEntryInfo, snowflakes.Unique):
 
     role_name: str | None = attrs.field(repr=True)
     """The name of the role this overwrite targets, if it targets a role."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class ChannelPositionUpdateEntryInfo(BaseAuditLogEntryInfo):
+    """Extra information for channel position update audit log entries."""
+
+    count: int = attrs.field(repr=True)
+    """The number of channel position updates."""
 
 
 @attrs_extensions.with_copy
@@ -684,6 +715,33 @@ class MemberMoveEntryInfo(MemberDisconnectEntryInfo):
         channel = await self.app.rest.fetch_channel(self.channel_id)
         assert isinstance(channel, channels.GuildVoiceChannel)
         return channel
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class RolePositionUpdateEntryInfo(BaseAuditLogEntryInfo):
+    """Extra information for role position update audit log entries."""
+
+    count: int = attrs.field(repr=True)
+    """The number of role position updates."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class VoiceChannelStatusDeleteEntryInfo(BaseAuditLogEntryInfo):
+    """Extra information for the voice channel status delete entry."""
+
+    channel_id: snowflakes.Snowflake = attrs.field(repr=True)
+    """The channel the voice channel status was deleted from."""
+
+
+@attrs_extensions.with_copy
+@attrs.define(kw_only=True, weakref_slot=False)
+class VoiceChannelStatusCreateEntryInfo(VoiceChannelStatusDeleteEntryInfo):
+    """Extra information for the voice channel status create entry."""
+
+    status: str = attrs.field(repr=True)
+    """The new voice channel status."""
 
 
 @attrs_extensions.with_copy

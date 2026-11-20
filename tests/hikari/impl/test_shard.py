@@ -103,7 +103,7 @@ def test__serialize_datetime_when_datetime_is_None():
 
 
 def test__serialize_datetime_when_datetime_is_not_None():
-    dt = datetime.datetime(2004, 11, 22, tzinfo=datetime.timezone.utc)
+    dt = datetime.datetime(2004, 11, 22, tzinfo=datetime.UTC)
     assert shard._serialize_datetime(dt) == 1101081600000
 
 
@@ -139,20 +139,21 @@ class TestGatewayTransport:
     @pytest.mark.asyncio
     async def test_send_close(self, transport_impl):
         transport_impl._sent_close = False
+        transport_impl._ws.close = mock.AsyncMock()
 
-        with mock.patch.object(asyncio, "wait_for", return_value=mock.AsyncMock()) as wait_for:
+        with mock.patch.object(asyncio, "timeout", wraps=asyncio.timeout) as timeout:
             with mock.patch.object(asyncio, "sleep") as sleep:
                 await transport_impl.send_close(code=1234, message=b"some message")
 
-        wait_for.assert_awaited_once_with(transport_impl._ws.close.return_value, timeout=5)
-        transport_impl._ws.close.assert_called_once_with(code=1234, message=b"some message")
+        timeout.assert_called_once_with(5)
+        transport_impl._ws.close.assert_awaited_once_with(code=1234, message=b"some message")
         transport_impl._exit_stack.aclose.assert_awaited_once_with()
         sleep.assert_awaited_once_with(0.25)
 
     @pytest.mark.asyncio
     async def test_send_close_when_TimeoutError(self, transport_impl):
         transport_impl._sent_close = False
-        transport_impl._ws.close.side_effect = asyncio.TimeoutError
+        transport_impl._ws.close.side_effect = TimeoutError
 
         with mock.patch.object(asyncio, "sleep") as sleep:
             await transport_impl.send_close(code=1234, message=b"some message")
@@ -165,7 +166,7 @@ class TestGatewayTransport:
     async def test_send_close_when_already_sent(self, transport_impl):
         transport_impl._sent_close = True
 
-        with mock.patch.object(aiohttp.ClientWebSocketResponse, "close", side_effect=asyncio.TimeoutError) as close:
+        with mock.patch.object(aiohttp.ClientWebSocketResponse, "close", side_effect=TimeoutError) as close:
             await transport_impl.send_close(code=1234, message=b"some message")
 
         close.assert_not_called()
@@ -329,6 +330,7 @@ class TestGatewayTransport:
             proxy=proxy_settings.url,
             proxy_headers=proxy_settings.headers,
             url="testing.com",
+            decode_text=False,
             autoclose=False,
         )
         exit_stack.aclose.assert_not_called()
@@ -373,7 +375,7 @@ class TestGatewayTransport:
             ),
             (aiohttp.ClientOSError("some os error"), "some os error"),
             (aiohttp.ClientConnectionError("some error"), "some error"),
-            (asyncio.TimeoutError("some error"), "Timeout exceeded"),
+            (TimeoutError("some error"), "Timeout exceeded"),
         ],
     )
     async def test_connect_when_expected_error_while_connecting(self, http_settings, proxy_settings, error, reason):
@@ -422,7 +424,7 @@ class TestGatewayBasicTransport:
     @pytest.mark.asyncio
     async def test__receive_and_check(self, transport_impl):
         transport_impl._ws.receive = mock.AsyncMock(
-            return_value=StubResponse(type=aiohttp.WSMsgType.TEXT, data="some text")
+            return_value=StubResponse(type=aiohttp.WSMsgType.TEXT, data=b"some text")
         )
 
         assert await transport_impl._receive_and_check() == b"some text"
@@ -533,6 +535,11 @@ class TestGatewayShardImpl:
     def test_id_property(self, client):
         client._shard_id = 101
         assert client.id == 101
+
+    def test_capabilities_property(self, client):
+        mock_capabilities = object()
+        client._capabilities = mock_capabilities
+        assert client.capabilities is mock_capabilities
 
     def test_intents_property(self, client):
         mock_intents = object()
@@ -704,12 +711,10 @@ class TestGatewayShardImplAsync:
     async def test_join(self, client):
         client._keep_alive_task = object()
 
-        with mock.patch.object(asyncio, "wait_for") as wait_for:
-            with mock.patch.object(asyncio, "shield", new=mock.Mock()) as shield:
-                await client.join()
+        with mock.patch.object(asyncio, "shield", new=mock.AsyncMock()) as shield:
+            await client.join()
 
-        shield.assert_called_once_with(client._keep_alive_task)
-        wait_for.assert_awaited_once_with(shield.return_value, timeout=None)
+        shield.assert_awaited_once_with(client._keep_alive_task)
 
     async def test__send_json(self, client):
         client._total_rate_limit = mock.AsyncMock()
@@ -816,6 +821,18 @@ class TestGatewayShardImplAsync:
             {"op": 8, "d": {"guild_id": "123", "query": "", "presences": include_presences, "limit": 0}}
         )
         check_if_alive.assert_called_once_with()
+
+    async def test_request_channel_info(self, client):
+        with mock.patch.object(shard.GatewayShardImpl, "_send_json") as send_json:
+            with mock.patch.object(shard.GatewayShardImpl, "_check_if_connected") as check_if_connected:
+                await client.request_channel_info(
+                    123, fields=[shard_api.ChannelInfoField.STATUS, shard_api.ChannelInfoField.VOICE_START_TIME]
+                )
+
+        send_json.assert_awaited_once_with(
+            {"op": 43, "d": {"guild_id": "123", "fields": ["status", "voice_start_time"]}}
+        )
+        check_if_connected.assert_called_once_with()
 
     @pytest.mark.parametrize("attr", ["_keep_alive_task", "_handshake_event"])
     async def test_start_when_already_running(self, client, attr):
@@ -945,6 +962,7 @@ class TestGatewayShardImplAsync:
         client._seq = None
         client._large_threshold = "your mom"
         client._intents = 9
+        client._capabilities = 32768
 
         heartbeat_task = object()
         poll_events_task = object()
@@ -1014,6 +1032,7 @@ class TestGatewayShardImplAsync:
                     },
                     "shard": [20, 100],
                     "intents": 9,
+                    "capabilities": 32768,
                     "presence": serialize_and_store_presence_payload.return_value,
                 },
             }
@@ -1190,6 +1209,22 @@ class TestGatewayShardImplAsync:
         assert client._seq == 101
         client._event_manager.consume_raw_event.assert_called_once_with("RESUMED", client, {"some": "test"})
         client._handshake_event.set.assert_called_once_with()
+
+    async def test__poll_events_on_dispatch_when_RATE_LIMITED(self, client):
+        data = {"opcode": 8, "retry_after": 12.5, "meta": {"guild_id": "123123", "nonce": "anonce"}}
+        payload = {"op": 0, "t": "RATE_LIMITED", "d": data, "s": 102}
+
+        client._ws = mock.Mock(receive_json=mock.AsyncMock(side_effect=[payload, RuntimeError]))
+        client._seq = 1000
+        client._event_manager.consume_raw_event = mock.Mock(side_effect=[LookupError])
+        client._handshake_event = mock.Mock()
+
+        with pytest.raises(RuntimeError):
+            await client._poll_events()
+
+        assert client._ws.receive_json.await_count == 2
+        assert client._seq == 102
+        client._event_manager.consume_raw_event.assert_called_once_with("RATE_LIMITED", client, data)
 
     async def test__poll_events_on_heartbeat_ack(self, client):
         payload = {"op": 11}
