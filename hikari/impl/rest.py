@@ -139,8 +139,9 @@ def _build_member_search_query(
     query: guilds.MemberSearchQuery, conversion: typing.Callable[[typing.Any], data_binding.JSONish]
 ) -> data_binding.JSONObjectBuilder:
     body = data_binding.JSONObjectBuilder()
-    body.put_array("or_query", query.or_query, conversion=conversion)
-    body.put_array("and_query", query.and_query, conversion=conversion)
+    for key, values in (("or_query", query.or_query), ("and_query", query.and_query)):
+        body.put_array(key, (values,) if isinstance(values, str) else values, conversion=conversion)
+
     body.put("range", query.range, conversion=lambda value: _build_member_search_range_query(value, conversion))
     return body
 

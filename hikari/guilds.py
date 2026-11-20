@@ -499,7 +499,10 @@ class MemberSearchRangeQuery:
 
 @attrs.define(kw_only=True, weakref_slot=False)
 class MemberSearchQuery:
-    """Values and ranges to match a guild member search field against."""
+    """Values and ranges to match a guild member search field against.
+
+    A string passed to `or_query` or `and_query` matches as a single value.
+    """
 
     or_query: undefined.UndefinedOr[typing.Sequence[_MemberSearchQueryValue]] = attrs.field(default=undefined.UNDEFINED)
     """Values to match using OR logic."""
