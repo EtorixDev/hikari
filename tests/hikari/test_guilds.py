@@ -643,6 +643,13 @@ class TestMember:
         with mock.patch.object(guilds.Member, "get_roles", return_value=[role2, role1]):
             assert model.get_top_role() is role1
 
+    def test_get_top_role_ranks_everyone_below_another_role_at_position_zero(self, model):
+        everyone = mock.Mock(id=model.guild_id, position=0)
+        role = mock.Mock(id=model.guild_id + 1, position=0)
+
+        with mock.patch.object(guilds.Member, "get_roles", return_value=[everyone, role]):
+            assert model.get_top_role() is role
+
     def test_get_top_role_when_roles_is_empty(self, model):
         with mock.patch.object(guilds.Member, "get_roles", return_value=[]):
             assert model.get_top_role() is None
